@@ -521,7 +521,7 @@
                         <button class="btn-mini btn-size" onclick="setCanvasHeight('${id}', 1650, this)">大</button>
                     </div>
                     <label style="font-size:11px; margin-left:10px; cursor:pointer;">
-                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 出力
+                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 印刷
                     </label>
                     <button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}')">🗑️ 削除</button>
                 </div>
@@ -550,49 +550,65 @@
             saveHistory(id); 
         }
 
-        function addMeetingCanvasBlock() {
-            const id = 'canvas_' + Date.now();
-            const container = document.getElementById('canvasContainer');
-            const addBtnContainer = container.querySelector('div[style*="display:flex"]');
+function addMeetingCanvasBlock() {
+    const id = 'canvas_' + Date.now();
+    const container = document.getElementById('canvasContainer');
+    const addBtnContainer = container.querySelector('div[style*="display:flex"]');
 
-            const block = document.createElement('div');
-            block.className = 'canvas-block';
-            block.id = 'block_' + id;
-            block.innerHTML = `
-                <div class="block-header" style="background:#e0f2f1; border-bottom:1px solid #b2dfdb;">
-                    <div class="block-ctrl-group">
-                        <span class="block-label" style="color:#00695c;">📋 打合せ表:</span>
-                        <span style="font-size:10px; color:#00695c; font-weight:bold; margin-right:10px;">[サイズ固定: A4縦長]</span>
-                    </div>
-                    <label style="font-size:11px; margin-left:10px; cursor:pointer;">
-                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 出力
-                    </label>
-                    <button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}')">🗑️ 削除</button>
-                </div>
-                <div class="canvas-wrapper" onclick="activateCanvas('${id}')">
-                    <canvas id="${id}" width="840" height="1188"></canvas>
-                </div>
-            `;
+    const block = document.createElement('div');
+    block.className = 'canvas-block';
+    block.id = 'block_' + id;
+    
+    // ★修正：ヘッダーのデザイン変更
+    block.innerHTML = `
+        <div class="block-header" style="background:#e0f2f1; border-bottom:1px solid #b2dfdb;">
+            <div class="block-ctrl-group">
+                <span class="block-label" style="color:#00695c; font-size:14px;">📋 打合せ表</span>
+            </div>
             
-            container.insertBefore(block, addBtnContainer); 
+            <label style="font-size:11px; margin-left:15px; cursor:pointer;">
+                <input type="checkbox" id="chk_${id}" checked> 🖨️ 印刷
+            </label>
 
-            const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
-            fCanvas.backgroundColor = "white";
-            fCanvas.setZoom(1); 
-            
-            const canvasData = {
-                id: id, canvasObj: fCanvas, history: [], historyStep: -1,
-                isHistoryLocked: false, heightState: 1188, blockElement: block, isMeetingSheet: true
-            };
-            canvasList.push(canvasData);
+            <span style="font-size:11px; margin-left:15px; color:#555;">
+                <span style="display:inline-block; width:10px; height:10px; background:#c8e6c9; border:1px solid #999; margin-right:2px; vertical-align:middle;"></span>通常
+                <span style="display:inline-block; width:10px; height:10px; background:#ffcdd2; border:1px solid #999; margin-left:8px; margin-right:2px; vertical-align:middle;"></span>倍額
+            </span>
 
-            drawMeetingTable(fCanvas);
-            fCanvas.setDimensions({ width: 840, height: 1188 });
-            setupCanvasEvents(fCanvas, id);
-            activateCanvas(id);
-            saveHistory(id); 
-            document.getElementById('zoomVal').textContent = '100%';
-        }
+            <button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}')">🗑️ 削除</button>
+        </div>
+        <div class="canvas-wrapper" onclick="activateCanvas('${id}')">
+            <canvas id="${id}" width="840" height="1188"></canvas>
+        </div>
+    `;
+    
+    container.insertBefore(block, addBtnContainer); 
+
+    const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
+    fCanvas.backgroundColor = "white";
+    fCanvas.setZoom(1); 
+    
+    const canvasData = {
+        id: id,
+        canvasObj: fCanvas,
+        history: [],
+        historyStep: -1,
+        isHistoryLocked: false,
+        heightState: 1188,
+        blockElement: block,
+        isMeetingSheet: true
+    };
+    canvasList.push(canvasData);
+
+    drawMeetingTable(fCanvas);
+    
+    fCanvas.setDimensions({ width: 840, height: 1188 });
+    setupCanvasEvents(fCanvas, id);
+    activateCanvas(id);
+    saveHistory(id); 
+    
+    document.getElementById('zoomVal').textContent = '100%';
+}
 
 // --- ヘルパー関数：チェックボックスの列を描画（間隔調整版） ---
 function drawCheckboxRow(cvs, startX, startY, items) {
@@ -631,7 +647,6 @@ function drawCheckboxRow(cvs, startX, startY, items) {
     });
 }
 
-// --- 打合せ表描画（4分割対応版） ---
 function drawMeetingTable(cvs) {
     const HEADER_H = 60;
     const ROW_H = 15;
@@ -639,88 +654,52 @@ function drawMeetingTable(cvs) {
     const TIME_TABLE_W = 400;
     const TECH_COL_W = 440;
     
-    // 共通スタイル
+    // ... (共通スタイルやヘッダー・データ行・罫線の描画コードは変更なし) ...
+    // ... (前回までの長いコード部分は省略せずそのまま使います) ...
+    
     const borderStyle = { stroke: '#000', strokeWidth: 1, selectable: false, evented: false };
     const textStyle = { fontFamily: DEFAULT_FONT, fill: '#000', selectable: false, evented: false };
     const headerFill = '#bdbdbd'; 
 
-    // === 1. 左上：タイムテーブル (変更なし) ===
+    // 1. 左上：タイムテーブル
     const colWidths = [30, 30, 200, 30, 30, 20, 20, 20, 20];
     const headerTexts = ["区", "時", "内容", "ホ", "多", "A", "B", "C", "D"];
-    
     let currentX = 0;
     colWidths.forEach((w, i) => {
-        cvs.add(new fabric.Rect({
-            left: currentX, top: 0, width: w, height: HEADER_H,
-            fill: headerFill, ...borderStyle
-        }));
-        cvs.add(new fabric.Text(headerTexts[i], {
-            left: currentX + w/2, top: HEADER_H/2, fontSize: 14, originX:'center', originY:'center', ...textStyle
-        }));
+        cvs.add(new fabric.Rect({ left: currentX, top: 0, width: w, height: HEADER_H, fill: headerFill, ...borderStyle }));
+        cvs.add(new fabric.Text(headerTexts[i], { left: currentX + w/2, top: HEADER_H/2, fontSize: 14, originX:'center', originY:'center', ...textStyle }));
         currentX += w;
     });
 
-    // データ行 (変更なし)
-    const zoneGroups = [
-        { start: 0, len: 6, text: "前延長" },
-        { start: 6, len: 12, text: "午前" },
-        { start: 18, len: 4, text: "" },
-        { start: 22, len: 16, text: "午後" },
-        { start: 38, len: 4, text: "" },
-        { start: 42, len: 18, text: "夜間" }
-    ];
-
-    const xPos = [0];
-    for(let i=0; i<colWidths.length; i++) xPos.push(xPos[i] + colWidths[i]);
+    // データ行
+    const zoneGroups = [ { start: 0, len: 6, text: "前延長" }, { start: 6, len: 12, text: "午前" }, { start: 18, len: 4, text: "" }, { start: 22, len: 16, text: "午後" }, { start: 38, len: 4, text: "" }, { start: 42, len: 18, text: "夜間" } ];
+    const xPos = [0]; for(let i=0; i<colWidths.length; i++) xPos.push(xPos[i] + colWidths[i]);
 
     for (let r = 0; r < ROWS_COUNT; r++) {
         const topY = HEADER_H + (r * ROW_H);
         const zone = zoneGroups.find(z => z.start === r);
-
         if (zone) {
             const h = zone.len * ROW_H;
-            cvs.add(new fabric.Rect({
-                left: xPos[0], top: topY, width: colWidths[0], height: h,
-                fill: 'white', ...borderStyle
-            }));
+            cvs.add(new fabric.Rect({ left: xPos[0], top: topY, width: colWidths[0], height: h, fill: 'white', ...borderStyle }));
             const vertText = zone.text.split('').join('\n');
-            cvs.add(new fabric.Text(vertText, {
-                left: xPos[0] + colWidths[0]/2, top: topY + h/2, 
-                fontSize: 12, originX:'center', originY:'center', ...textStyle
-            }));
+            cvs.add(new fabric.Text(vertText, { left: xPos[0] + colWidths[0]/2, top: topY + h/2, fontSize: 12, originX:'center', originY:'center', ...textStyle }));
         }
-
-        cvs.add(new fabric.Rect({
-            left: xPos[1], top: topY, width: colWidths[1] + colWidths[2], height: ROW_H,
-            fill: 'white', stroke: '#ccc', strokeWidth: 1, 
-            selectable: false, evented: true, hoverCursor: 'pointer',
-            isCell: true, colorType: 'Content' 
-        }));
-
+        cvs.add(new fabric.Rect({ left: xPos[1], top: topY, width: colWidths[1] + colWidths[2], height: ROW_H, fill: 'white', stroke: '#ccc', strokeWidth: 1, selectable: false, evented: true, hoverCursor: 'pointer', isCell: true, colorType: 'Content' }));
         if ((r - 2) % 4 === 0) {
             const hour = 8 + (r - 2) / 4;
             if (hour <= 22) {
-                cvs.add(new fabric.Text(`${hour}:00`, {
-                    left: xPos[1] + colWidths[1]/2, top: topY, 
-                    fontSize: 10, originX:'center', originY:'center', backgroundColor:'transparent', ...textStyle
-                }));
+                cvs.add(new fabric.Text(`${hour}:00`, { left: xPos[1] + colWidths[1]/2, top: topY, fontSize: 10, originX:'center', originY:'center', backgroundColor:'transparent', ...textStyle }));
             }
         }
-
         if (zone) {
             const h = zone.len * ROW_H;
             for (let c = 3; c <= 8; c++) {
-                cvs.add(new fabric.Rect({
-                    left: xPos[c], top: topY, width: colWidths[c], height: h,
-                    fill: 'white', stroke: 'black', strokeWidth: 1,
-                    selectable: false, evented: true, hoverCursor: 'pointer',
-                    isCell: true, colorType: 'Checkbox' 
-                }));
+                cvs.add(new fabric.Rect({ left: xPos[c], top: topY, width: colWidths[c], height: h, fill: 'white', stroke: 'black', strokeWidth: 1, selectable: false, evented: true, hoverCursor: 'pointer', isCell: true, colorType: 'Checkbox' }));
             }
         }
     }
     
-    // 罫線補正 (変更なし)
+    // 罫線補正
     const tableBottomY = HEADER_H + (ROWS_COUNT * ROW_H);
     cvs.add(new fabric.Line([xPos[1], HEADER_H, xPos[3], HEADER_H], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
     cvs.add(new fabric.Line([xPos[1], HEADER_H, xPos[1], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
@@ -728,54 +707,39 @@ function drawMeetingTable(cvs) {
     cvs.add(new fabric.Line([xPos[1], tableBottomY, xPos[3], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
     cvs.add(new fabric.Line([0, tableBottomY, TIME_TABLE_W, tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
 
-    // 内容列テキスト (変更なし)
+    // --- 内容列テキスト (★修正：fontSize 14) ---
     const contentLines = "\n".repeat(57); 
     cvs.add(new fabric.Textbox(contentLines, {
         left: 60 + 10, top: HEADER_H, width: 180 - 10, height: 960, 
-        fontSize: 11, fontFamily: DEFAULT_FONT, fill: '#000',
+        fontSize: 14, // ★修正
+        fontFamily: DEFAULT_FONT, fill: '#000',
         splitByGrapheme: true, backgroundColor: 'transparent',
         lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
         hasControls: false, hoverCursor: 'text',
         isPermanent: true 
     }));
 
-
-    // === 2. 右上：技術欄 (★ここを4分割に修正) ===
-    
-    // 定義：高さ960pxを4等分 = 240px
+    // --- 技術欄 ---
     const techH = 240;
-    
     const techSections = [
-        { label: "舞台", y: 0, items: ["緞帳", "バトン操作", "ピアノ調律", "吊り物あり", "プラザ枠"] }, // ★項目追加
-        { label: "音響", y: 240, items: ["叩き", "録音", "音声送り"] }, // Y座標変更
-        { label: "照明", y: 480, items: ["講演会", "要望"] }, // Y座標変更
-        { label: "映像", y: 720, items: ["調整室PJ", "動画あり"] } // ★新規追加
+        { label: "舞台", y: 0, items: ["緞帳", "バトン操作", "ピアノ調律", "吊り物あり", "プラザ枠"] },
+        { label: "音響", y: 240, items: ["叩き", "録音", "音声送り"] },
+        { label: "照明", y: 480, items: ["講演会", "要望"] },
+        { label: "映像", y: 720, items: ["調整室PJ", "動画あり"] }
     ];
     
     techSections.forEach((sec, i) => {
         const topY = sec.y;
-        
-        // 枠
-        cvs.add(new fabric.Rect({
-            left: TIME_TABLE_W, top: topY, width: TECH_COL_W, height: techH,
-            fill: 'white', ...borderStyle
-        }));
-        // ラベル
-        cvs.add(new fabric.Text(sec.label, {
-            left: TIME_TABLE_W + 5, top: topY + 5, fontSize: 15, ...textStyle
-        }));
-        
-        // チェックボックス
+        cvs.add(new fabric.Rect({ left: TIME_TABLE_W, top: topY, width: TECH_COL_W, height: techH, fill: 'white', ...borderStyle }));
+        cvs.add(new fabric.Text(sec.label, { left: TIME_TABLE_W + 5, top: topY + 5, fontSize: 15, ...textStyle }));
         drawCheckboxRow(cvs, TIME_TABLE_W + 50, topY + 15, sec.items);
         
-        // テキストエリア
-        // ★高さが240pxになったので、改行数を減らす (12 -> 8)
+        // ★修正：fontSize 14
         const techLines = "\n".repeat(8);
         cvs.add(new fabric.Textbox(techLines, {
-            left: TIME_TABLE_W + 15, 
-            top: topY + 45, 
-            width: TECH_COL_W - 30, 
-            fontSize: 12, fontFamily: DEFAULT_FONT, fill: '#000',
+            left: TIME_TABLE_W + 15, top: topY + 45, width: TECH_COL_W - 30, 
+            fontSize: 14, // ★修正
+            fontFamily: DEFAULT_FONT, fill: '#000',
             splitByGrapheme: true,
             lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
             hasControls: false, hoverCursor: 'text',
@@ -783,25 +747,18 @@ function drawMeetingTable(cvs) {
         }));
     });
 
-
-    // === 3. 下：備考欄 (変更なし) ===
-    const REMARKS_Y = 960;
-    const REMARKS_H = 1188 - 960;
-    
-    cvs.add(new fabric.Rect({
-        left: 0, top: REMARKS_Y, width: 840, height: REMARKS_H,
-        fill: 'white', ...borderStyle
-    }));
-    cvs.add(new fabric.Text("備考", {
-        left: 5, top: REMARKS_Y + 5, fontSize: 15, ...textStyle
-    }));
-    
+    // --- 備考欄 ---
+    const REMARKS_Y = 960; const REMARKS_H = 1188 - 960;
+    cvs.add(new fabric.Rect({ left: 0, top: REMARKS_Y, width: 840, height: REMARKS_H, fill: 'white', ...borderStyle }));
+    cvs.add(new fabric.Text("備考", { left: 5, top: REMARKS_Y + 5, fontSize: 15, ...textStyle }));
     drawCheckboxRow(cvs, 50, REMARKS_Y + 15, ["空調指定", "ホワイエ販売", "２階展示ボード", "後納"]);
     
+    // ★修正：fontSize 14
     const remarkLines = "\n".repeat(7);
     cvs.add(new fabric.Textbox(remarkLines, {
         left: 5 + 5, top: REMARKS_Y + 45, width: 840 - 30, 
-        fontSize: 12, fontFamily: DEFAULT_FONT, fill: '#000',
+        fontSize: 14, // ★修正
+        fontFamily: DEFAULT_FONT, fill: '#000',
         splitByGrapheme: true,
         lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
         hasControls: false, hoverCursor: 'text',
@@ -809,11 +766,7 @@ function drawMeetingTable(cvs) {
     }));
 
     // 全体の外枠
-    cvs.add(new fabric.Rect({
-        left: 1, top: 1, width: 840 - 2, height: 1188 - 2,
-        fill: 'transparent', stroke: 'black', strokeWidth: 1,
-        selectable: false, evented: false
-    }));
+    cvs.add(new fabric.Rect({ left: 1, top: 1, width: 840 - 2, height: 1188 - 2, fill: 'transparent', stroke: 'black', strokeWidth: 1, selectable: false, evented: false }));
 
     cvs.requestRenderAll();
 }
