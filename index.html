@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>舞台図面エディター Ver2.1</title>
+    <title>舞台図面エディター Ver2.5</title>
     <script src="fabric.min.js"></script>
     <script src="jspdf.umd.min.js"></script>
     
@@ -74,13 +74,47 @@
         .btn-red { color: #c62828; font-weight: bold; background-color: #ffebee !important; border-color: #ef9a9a !important;}
         .btn-resume { color: #e65100; font-weight: bold; background-color: #fff3e0 !important; border-color: #ffcc80 !important;}
 
-        /* サイドバー */
-        .main-container { display: flex; flex: 1; overflow: hidden; }
+        /* --- サイドバー関連 --- */
+        .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+        /* 1段目（左端）：基本ツール用 */
         .sidebar {
             width: 130px; background: #fff; border-right: 1px solid #ccc;
             padding: 8px; overflow-y: auto; display: flex; flex-direction: column;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.05); flex-shrink: 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05); flex-shrink: 0; z-index: 10;
         }
+
+        /* 2段目（その右）：備品・サブツール用 */
+        .sub-sidebar {
+            width: 130px; background: #f5f5f5; border-right: 1px solid #ccc;
+            padding: 8px; overflow-y: auto; display: flex; flex-direction: column;
+            box-shadow: inset 5px 0 5px -5px rgba(0,0,0,0.1); flex-shrink: 0; z-index: 9;
+            
+            /* アニメーション設定 */
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            margin-left: 0; /* 開いた状態 */
+        }
+
+        /* 折りたたみ時のクラス */
+        .sub-sidebar.collapsed {
+            margin-left: -147px; /* 完全に隠す */
+        }
+
+        /* ★新設：パネル切り替えボタン */
+        .panel-toggle-btn {
+            width: 100%; padding: 8px 4px; margin-bottom: 10px;
+            background: #eceff1; border: 1px solid #b0bec5; border-radius: 4px;
+            font-size: 11px; font-weight: bold; color: #455a64;
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.2s;
+        }
+        .panel-toggle-btn:hover { background: #cfd8dc; }
+        
+        /* 開いているとき（アクティブ）のデザイン */
+        .panel-toggle-btn.active {
+            background: #fff3e0; border-color: #ffb74d; color: #e65100;
+        }
+        
         .section-header { font-size: 10px; font-weight: bold; color: #455a64; margin: 12px 0 4px 0; border-bottom: 1px solid #cfd8dc; padding-bottom: 2px;}
 
         /* クイックカラーなど */
@@ -199,7 +233,7 @@
 <body>
 
     <header>
-        <div class="title">舞台図面エディター Ver2.1</div>
+        <div class="title">舞台図面エディター Ver2.5</div>
         <div class="input-group"><label>📅</label><input type="date" id="eventDate"></div>
         <div class="input-group"><label>🏷️</label><input type="text" id="eventName" placeholder="イベント名"></div>
         <div class="input-group"><label>📍</label><input type="text" id="eventPlace" placeholder="場所"></div>
@@ -262,15 +296,19 @@
 
     <div class="main-container">
         <div class="sidebar">
-            <div class="section-header" style="margin-top:0;">🏟️ 背景操作</div>
             
+            <button id="panelToggleBtn" class="panel-toggle-btn active" onclick="toggleSubSidebar()">
+                <span>🪑 備品・画像パネル</span>
+                <span id="panelToggleIcon">▶</span>
+            </button>
+
+            <div class="section-header" style="margin-top:0;">🏟️ 背景操作</div>
             <div class="grid-2">
                 <button id="btn-sideCurtains" onclick="toggleLayer('sideCurtains', addSideCurtains)" class="item-btn" style="background:#e1bee7;">袖幕</button>
                 <button id="btn-daikoku" onclick="toggleLayer('daikoku', addDaikokuMaku)" class="item-btn" style="background:#ce93d8;">大黒幕</button>
                 <button id="btn-reflect" onclick="toggleLayer('reflect', addReflectingBoard)" class="item-btn" style="background:#fff9c4;">反響板</button>
                 <button id="btn-doncho" onclick="toggleLayer('doncho', addDoncho)" class="item-btn" style="background:#c8e6c9;">緞帳</button>
             </div>
-            
             <div class="grid-2" style="margin-top:2px;">
                 <button onclick="addFrontAudience()" class="item-btn" style="background:#ffccbc;">客席(前方)</button>
                 <button id="btn-retractable" onclick="toggleLayer('retractable', addRetractableSeating)" class="item-btn" style="background:#ffab91;">移動観覧席</button>
@@ -314,12 +352,10 @@
             </div>
             <div class="grid-2" style="margin-top:4px;">
                 <button class="item-btn btn-line-style" onclick="applyLineStyle('solid')">
-                    <span style="font-size:12px; line-height:1;">────</span>
-                    <span style="font-size:10px;">実線</span>
+                    <span style="font-size:12px; line-height:1;">────</span><span style="font-size:10px;">実線</span>
                 </button>
                 <button class="item-btn btn-line-style" onclick="applyLineStyle('dashed')">
-                    <span style="font-size:12px; line-height:1;">- - - -</span>
-                    <span style="font-size:10px;">点線</span>
+                    <span style="font-size:12px; line-height:1;">- - - -</span><span style="font-size:10px;">点線</span>
                 </button>
             </div>
 
@@ -327,9 +363,15 @@
             <div class="style-row" style="justify-content: flex-end;">
                 <input type="number" id="opacityInput" min="0" max="100" value="100" step="10" oninput="applyOpacity(this.value)" style="width:40px;">
             </div>
+            
+            <div class="section-header">🔤 文字</div>
+            <button class="item-btn btn-full" style="margin-bottom:4px;" onclick="addText()"><span>📝</span>文字を追加</button>
+            <div class="style-row">
+                <span>サイズ:</span>
+                <input type="number" id="fontSizeInput" min="1" max="200" value="20" oninput="applyStyle('fontSize', parseInt(this.value))">
+            </div>
 
             <div class="section-header">📐 記号</div>
-            <button class="item-btn btn-full" style="margin-bottom:4px;" onclick="addText()"><span>📝</span>文字</button>
             <div class="grid-2">
                 <button class="item-btn" onclick="addLine()"><span>➖</span>線</button>
                 <button class="item-btn" onclick="addArrow()"><span>➡️</span>矢印</button>
@@ -338,9 +380,11 @@
                 <button class="item-btn" onclick="addDottedCircle()"><span>⭕</span>点丸</button>
                 <button class="item-btn" onclick="addWaveLine()"><span>〰️</span>波線</button>
             </div>
-
-            <div style="margin-top:10px; border-top:1px solid #ccc;"></div>
-            <button onclick="document.getElementById('objImgInput').click()" class="item-btn btn-full" style="margin-top:5px; background:#fff3e0;">🖼️ 画像を追加</button>
+        </div>
+        
+        <div class="sub-sidebar" id="subSidebar">
+            <div class="section-header" style="margin-top:0;">🖼️ 画像</div>
+            <button onclick="document.getElementById('objImgInput').click()" class="item-btn btn-full" style="margin-top:5px; background:#fff3e0;">画像を追加</button>
             <input type="file" id="objImgInput" accept="image/*" onchange="addImageObject(this)" style="display:none">
 
             <div class="section-header">🪑 備品</div>
@@ -373,6 +417,7 @@
         <div class="canvas-area" id="canvasContainer">
             <div style="display:flex; gap:10px; width:840px; margin-bottom:20px;">
                 <button class="add-canvas-btn" onclick="addNewCanvasBlock()" style="flex:1; margin-bottom:0;">➕ 図面を追加</button>
+                <button class="add-canvas-btn" onclick="addMeetingCanvasBlock()" style="flex:1; margin-bottom:0; background:#e0f2f1; color:#00695c; border-color:#009688;">📋 打合せ表を追加</button>
                 <button class="add-canvas-btn" onclick="duplicateActiveCanvas()" style="flex:1; margin-bottom:0; background:#fff9c4; color:#ef6c00; border-color:#ff9800;">📑 アクティブな図面を複製</button>
             </div>
         </div>
@@ -405,7 +450,14 @@
 
     <script>
         const DEFAULT_FONT = 'Arial';
-        const PROPERTIES_TO_INCLUDE = ['id', 'isBackground', 'selectable', 'evented', 'strokeDashArray', 'lockScalingX', 'lockScalingY', 'layerId', 'strokeUniform'];
+        // ★保存プロパティにカスタム項目を追加
+        const PROPERTIES_TO_INCLUDE = [
+            'id', 'isBackground', 'selectable', 'evented', 'strokeDashArray', 
+            'lockScalingX', 'lockScalingY', 'layerId', 'strokeUniform',
+            'lockMovementX', 'lockMovementY', 'hasControls', 'hoverCursor', 
+            'isCell', 'colorType', 'cellState', 
+            'isPermanent' // ★追加：削除禁止フラグ
+        ];
         const BASE_WIDTH = 840;
         const LS_KEY = 'stage_editor_autosave_v2';
         
@@ -413,30 +465,18 @@
         let activeCanvasId = null;
         let _clipboard = null;
         
-        // ★ 自動保存関連の変数
-        let hasUnsavedChanges = false; // 変更があるかどうかのフラグ
-        const AUTO_SAVE_INTERVAL = 30000; // 30秒
+        let hasUnsavedChanges = false;
+        const AUTO_SAVE_INTERVAL = 30000;
 
-        // --- 起動時処理 ---
         window.onload = function() {
             addNewCanvasBlock('メイン図面');
-            
-            // 定期的な自動保存タイマーを開始
             setInterval(checkAndAutoSave, AUTO_SAVE_INTERVAL);
         };
 
-        // --- 自動保存ロジック (タイマー呼び出し) ---
         function checkAndAutoSave() {
-            // 変更がない、またはキャンバスが無い場合は何もしない
             if (!hasUnsavedChanges || canvasList.length === 0) return;
-
-            // 保存実行
             saveToAutoSave();
-            
-            // フラグをリセット
             hasUnsavedChanges = false;
-            
-            // 保存通知を出す
             showSaveStatus();
         }
 
@@ -452,13 +492,7 @@
                     json: c.canvasObj.toJSON(PROPERTIES_TO_INCLUDE)
                 }))
             };
-
-            try {
-                localStorage.setItem(LS_KEY, JSON.stringify(dataToSave));
-                // console.log('Auto-saved to localStorage');
-            } catch (e) {
-                console.warn('LocalStorage error', e);
-            }
+            try { localStorage.setItem(LS_KEY, JSON.stringify(dataToSave)); } catch (e) { console.warn(e); }
         }
 
         function showSaveStatus() {
@@ -467,18 +501,11 @@
             setTimeout(() => { el.classList.remove('show'); }, 2000);
         }
 
-        // 変更があったことをマークする関数
-        function markUnsaved() {
-            hasUnsavedChanges = true;
-        }
+        function markUnsaved() { hasUnsavedChanges = true; }
 
-        // --- 自動保存からの復元 ---
         function loadFromAutoSave() {
             const savedData = localStorage.getItem(LS_KEY);
-            if (!savedData) {
-                alert('前回の保存データが見つかりません。');
-                return;
-            }
+            if (!savedData) { alert('前回の保存データが見つかりません。'); return; }
             if(!confirm('現在作業中の内容は破棄され、前回の続きから再開します。\nよろしいですか？')) return;
 
             try {
@@ -496,23 +523,33 @@
                 } else {
                     addNewCanvasBlock('メイン図面');
                 }
-                
-                // 復元直後は「変更なし」とする
                 hasUnsavedChanges = false;
-
             } catch(e) {
-                console.error('復元エラー:', e);
-                alert('データの復元に失敗しました。');
+                console.error('復元エラー:', e); alert('データの復元に失敗しました。');
             }
         }
 
-        // inputの変更も「変更あり」としてマーク
         document.getElementById('eventDate').addEventListener('change', markUnsaved);
         document.getElementById('eventName').addEventListener('input', markUnsaved);
         document.getElementById('eventPlace').addEventListener('input', markUnsaved);
 
-
-        // --- 以下、既存ロジック ---
+        // --- サイドバー折りたたみ (修正版) ---
+        function toggleSubSidebar() {
+            const sub = document.getElementById('subSidebar');
+            const btn = document.getElementById('panelToggleBtn');
+            const icon = document.getElementById('panelToggleIcon');
+            
+            sub.classList.toggle('collapsed');
+            
+            // 開閉状態に合わせてボタンのスタイルとアイコンを変更
+            if(sub.classList.contains('collapsed')) {
+                btn.classList.remove('active');
+                icon.textContent = '▶';
+            } else {
+                btn.classList.add('active');
+                icon.textContent = '◀';
+            }
+        }
 
         // --- キャンバス追加・管理 ---
         function addNewCanvasBlock(title = '新規図面') {
@@ -560,12 +597,217 @@
 
             drawDefaultBackground(fCanvas, 500);
             updateHeightButtons(id, 500);
-            
             fCanvas.setDimensions({ width: BASE_WIDTH * 0.5, height: 500 * 0.5 });
             setupCanvasEvents(fCanvas, id);
             activateCanvas(id);
             saveHistory(id); 
         }
+
+        function addMeetingCanvasBlock() {
+            const id = 'canvas_' + Date.now();
+            const container = document.getElementById('canvasContainer');
+            const addBtnContainer = container.querySelector('div[style*="display:flex"]');
+
+            const block = document.createElement('div');
+            block.className = 'canvas-block';
+            block.id = 'block_' + id;
+            block.innerHTML = `
+                <div class="block-header" style="background:#e0f2f1; border-bottom:1px solid #b2dfdb;">
+                    <div class="block-ctrl-group">
+                        <span class="block-label" style="color:#00695c;">📋 打合せ表:</span>
+                        <span style="font-size:10px; color:#00695c; font-weight:bold; margin-right:10px;">[サイズ固定: A4縦長]</span>
+                    </div>
+                    <label style="font-size:11px; margin-left:10px; cursor:pointer;">
+                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 出力
+                    </label>
+                    <button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}')">🗑️ 削除</button>
+                </div>
+                <div class="canvas-wrapper" onclick="activateCanvas('${id}')">
+                    <canvas id="${id}" width="840" height="1188"></canvas>
+                </div>
+            `;
+            
+            container.insertBefore(block, addBtnContainer); 
+
+            const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
+            fCanvas.backgroundColor = "white";
+            fCanvas.setZoom(1); 
+            
+            const canvasData = {
+                id: id,
+                canvasObj: fCanvas,
+                history: [],
+                historyStep: -1,
+                isHistoryLocked: false,
+                heightState: 1188,
+                blockElement: block,
+                isMeetingSheet: true
+            };
+            canvasList.push(canvasData);
+
+            drawMeetingTable(fCanvas);
+            fCanvas.setDimensions({ width: 840, height: 1188 });
+            setupCanvasEvents(fCanvas, id);
+            activateCanvas(id);
+            saveHistory(id); 
+            document.getElementById('zoomVal').textContent = '100%';
+        }
+
+        function drawMeetingTable(cvs) {
+            const HEADER_H = 60;
+            const ROW_H = 15;
+            const ROWS_COUNT = 60; 
+            const TIME_TABLE_W = 400;
+            const TECH_COL_W = 440;
+            
+            const borderStyle = { stroke: '#000', strokeWidth: 1, selectable: false, evented: false };
+            const textStyle = { fontFamily: DEFAULT_FONT, fill: '#000', selectable: false, evented: false };
+            const headerFill = '#bdbdbd'; 
+
+            const colWidths = [30, 30, 200, 30, 30, 20, 20, 20, 20];
+            const headerTexts = ["区", "時", "内容", "ホ", "多", "A", "B", "C", "D"];
+            
+            let currentX = 0;
+            colWidths.forEach((w, i) => {
+                cvs.add(new fabric.Rect({
+                    left: currentX, top: 0, width: w, height: HEADER_H,
+                    fill: headerFill, ...borderStyle
+                }));
+                cvs.add(new fabric.Text(headerTexts[i], {
+                    left: currentX + w/2, top: HEADER_H/2, fontSize: 14, originX:'center', originY:'center', ...textStyle
+                }));
+                currentX += w;
+            });
+
+            const zoneGroups = [
+                { start: 0, len: 6, text: "前延長" },
+                { start: 6, len: 12, text: "午前" },
+                { start: 18, len: 4, text: "" },
+                { start: 22, len: 16, text: "午後" },
+                { start: 38, len: 4, text: "" },
+                { start: 42, len: 18, text: "夜間" }
+            ];
+
+            const xPos = [0];
+            for(let i=0; i<colWidths.length; i++) xPos.push(xPos[i] + colWidths[i]);
+
+            for (let r = 0; r < ROWS_COUNT; r++) {
+                const topY = HEADER_H + (r * ROW_H);
+                const zone = zoneGroups.find(z => z.start === r);
+
+                if (zone) {
+                    const h = zone.len * ROW_H;
+                    cvs.add(new fabric.Rect({
+                        left: xPos[0], top: topY, width: colWidths[0], height: h,
+                        fill: 'white', ...borderStyle
+                    }));
+                    const vertText = zone.text.split('').join('\n');
+                    cvs.add(new fabric.Text(vertText, {
+                        left: xPos[0] + colWidths[0]/2, top: topY + h/2, 
+                        fontSize: 12, originX:'center', originY:'center', ...textStyle
+                    }));
+                }
+
+                cvs.add(new fabric.Rect({
+                    left: xPos[1], top: topY, 
+                    width: colWidths[1] + colWidths[2],
+                    height: ROW_H,
+                    fill: 'white', stroke: '#ccc', strokeWidth: 1, 
+                    selectable: false, evented: true, hoverCursor: 'pointer',
+                    isCell: true, colorType: 'Content' 
+                }));
+
+                if ((r - 2) % 4 === 0) {
+                    const hour = 8 + (r - 2) / 4;
+                    if (hour <= 22) {
+                        cvs.add(new fabric.Text(`${hour}:00`, {
+                            left: xPos[1] + colWidths[1]/2, top: topY, 
+                            fontSize: 10, originX:'center', originY:'center', backgroundColor:'transparent', ...textStyle
+                        }));
+                    }
+                }
+
+                if (zone) {
+                    const h = zone.len * ROW_H;
+                    for (let c = 3; c <= 8; c++) {
+                        cvs.add(new fabric.Rect({
+                            left: xPos[c], top: topY, width: colWidths[c], height: h,
+                            fill: 'white', stroke: 'black', strokeWidth: 1,
+                            selectable: false, evented: true, hoverCursor: 'pointer',
+                            isCell: true, colorType: 'Checkbox' 
+                        }));
+                    }
+                }
+            }
+            
+            const tableBottomY = HEADER_H + (ROWS_COUNT * ROW_H);
+            cvs.add(new fabric.Line([xPos[1], HEADER_H, xPos[3], HEADER_H], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+            cvs.add(new fabric.Line([xPos[1], HEADER_H, xPos[1], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+            cvs.add(new fabric.Line([xPos[3], HEADER_H, xPos[3], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+            cvs.add(new fabric.Line([xPos[1], tableBottomY, xPos[3], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+            cvs.add(new fabric.Line([0, tableBottomY, TIME_TABLE_W, tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+
+            const contentLines = "\n".repeat(57); 
+            cvs.add(new fabric.Textbox(contentLines, {
+                left: 60 + 10, top: HEADER_H, width: 180 - 10, height: 960, 
+                fontSize: 11, fontFamily: DEFAULT_FONT, fill: '#000',
+                splitByGrapheme: true, backgroundColor: 'transparent',
+                lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
+                hasControls: false, hoverCursor: 'text',
+                isPermanent: true // ★追加：削除禁止
+            }));
+
+            const techLabels = ["舞台", "音響", "照明"];
+            const techH = 320;
+            techLabels.forEach((label, i) => {
+                const topY = i * techH;
+                cvs.add(new fabric.Rect({
+                    left: TIME_TABLE_W, top: topY, width: TECH_COL_W, height: techH,
+                    fill: 'white', ...borderStyle
+                }));
+                cvs.add(new fabric.Text(label, {
+                    left: TIME_TABLE_W + 5, top: topY + 5, fontSize: 15, ...textStyle
+                }));
+                const techLines = "\n".repeat(12);
+                cvs.add(new fabric.Textbox(techLines, {
+                    left: TIME_TABLE_W + 5 + 5, top: topY + 25, width: TECH_COL_W - 10 - 10, 
+                    fontSize: 12, fontFamily: DEFAULT_FONT, fill: '#000',
+                    splitByGrapheme: true,
+                    lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
+                    hasControls: false, hoverCursor: 'text',
+                    isPermanent: true // ★追加：削除禁止
+                }));
+            });
+
+            const REMARKS_Y = 960;
+            const REMARKS_H = 1188 - 960;
+            cvs.add(new fabric.Rect({
+                left: 0, top: REMARKS_Y, width: 840, height: REMARKS_H,
+                fill: 'white', ...borderStyle
+            }));
+            cvs.add(new fabric.Text("備考", {
+                left: 5, top: REMARKS_Y + 5, fontSize: 15, ...textStyle
+            }));
+            const remarkLines = "\n".repeat(7); 
+            cvs.add(new fabric.Textbox(remarkLines, {
+                left: 5 + 5, top: REMARKS_Y + 25, width: 840 - 10 - 10, 
+                fontSize: 12, fontFamily: DEFAULT_FONT, fill: '#000',
+                splitByGrapheme: true,
+                lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
+                hasControls: false, hoverCursor: 'text',
+                isPermanent: true // ★追加：削除禁止
+            }));
+
+            // 全体の外枠 (書き出し切れ防止)
+            cvs.add(new fabric.Rect({
+                left: 1, top: 1, width: 840 - 2, height: 1188 - 2,
+                fill: 'transparent', stroke: 'black', strokeWidth: 1,
+                selectable: false, evented: false
+            }));
+
+            cvs.requestRenderAll();
+        }
+
 
         function deleteCanvasBlock(id) {
             if(!confirm('この図面を削除しますか？')) return;
@@ -578,7 +820,7 @@
                     activeCanvasId = null;
                     document.getElementById('activeCanvasName').textContent = 'なし';
                 }
-                markUnsaved(); // 削除も変更としてマーク
+                markUnsaved(); 
             }
         }
 
@@ -606,14 +848,21 @@
             return canvasList.find(c => c.id === id);
         }
 
-        // --- キャンバス高さ制御 ---
         function setCanvasHeight(id, height, btn) {
             const data = canvasList.find(c => c.id === id);
             if(!data) return;
             
             data.heightState = height;
             data.canvasObj.setDimensions({ width: BASE_WIDTH * data.canvasObj.getZoom(), height: height * data.canvasObj.getZoom() });
-            drawDefaultBackground(data.canvasObj, height);
+            
+            if(data.isMeetingSheet) {
+                data.canvasObj.clear();
+                data.canvasObj.backgroundColor = "white";
+                drawMeetingTable(data.canvasObj);
+            } else {
+                drawDefaultBackground(data.canvasObj, height);
+            }
+
             updateHeightButtons(id, height);
             activateCanvas(id);
             saveHistory(id);
@@ -624,13 +873,11 @@
             const btns = block.querySelectorAll('.btn-size');
             btns.forEach(b => b.classList.remove('active'));
             if(height === 500) btns[0].classList.add('active');
-            else if(height === 1000) btns[1].classList.add('active');
+            else if(height === 1000 || height === 1188) btns[1].classList.add('active');
             else if(height === 1650) btns[2].classList.add('active');
         }
 
-        // --- 共通イベント設定 ---
         function setupCanvasEvents(cvs, id) {
-            // 操作があったら履歴保存
             cvs.on('object:added', (e) => { if(!e.target.excludeFromExport && !getCanvasData(id).isBatchDrawing) saveHistory(id); });
             cvs.on('object:modified', () => saveHistory(id));
             cvs.on('object:removed', () => { if(!getCanvasData(id).isBatchDrawing) saveHistory(id); });
@@ -650,6 +897,28 @@
             
             cvs.on('mouse:down', function(opt) {
                 if(activeCanvasId !== id) activateCanvas(id);
+                
+                if (opt.target && opt.target.isCell) {
+                    const type = opt.target.colorType; 
+                    const curr = opt.target.fill;
+                    let nextColor = 'white';
+
+                    if (type === 'Content') {
+                        if (curr === 'white') nextColor = '#fff9c4';
+                        else nextColor = 'white';
+                    } 
+                    else if (type === 'Checkbox') {
+                        if (curr === 'white') nextColor = '#c8e6c9';
+                        else if (curr === '#c8e6c9') nextColor = '#ffcdd2';
+                        else nextColor = 'white';
+                    }
+                    
+                    opt.target.set('fill', nextColor);
+                    cvs.requestRenderAll();
+                    saveHistory(id);
+                    return; 
+                }
+
                 if(opt.target) {
                     opt.target._startLeft = opt.target.left;
                     opt.target._startTop = opt.target.top;
@@ -675,7 +944,6 @@
             });
         }
 
-        // --- 履歴管理 ---
         function saveHistory(id) {
             const data = getCanvasData(id);
             if(!data || data.isHistoryLocked || data.isBatchDrawing) return;
@@ -688,8 +956,6 @@
             if (data.history.length > 30) { data.history.shift(); data.historyStep--; }
             
             updateLayerButtonStates();
-            
-            // ★ ここで「変更あり」フラグを立てる（即保存はしない）
             markUnsaved();
         }
 
@@ -703,7 +969,7 @@
                     restoreBackgroundState(data.canvasObj); 
                     data.isHistoryLocked = false; 
                     updateObjStatus();
-                    markUnsaved(); // Undoも変更とみなす
+                    markUnsaved(); 
                 });
             }
         }
@@ -718,12 +984,11 @@
                     restoreBackgroundState(data.canvasObj); 
                     data.isHistoryLocked = false; 
                     updateObjStatus();
-                    markUnsaved(); // Redoも変更とみなす
+                    markUnsaved(); 
                 });
             }
         }
 
-        // --- 打刻 ---
         function addStamp() {
             const d = document.getElementById('eventDate').value;
             const n = document.getElementById('eventName').value;
@@ -742,7 +1007,6 @@
             addToActive(stamp, true);
         }
 
-        // --- 背景描画 ---
         function drawDefaultBackground(cvs, height) {
             const staticC = new fabric.StaticCanvas(null, { width: BASE_WIDTH, height: height });
             const offsetX = 20; 
@@ -799,7 +1063,6 @@
             });
         }
 
-        // --- ズーム ---
         function changeZoom(delta) {
             const cvs = getActiveCanvas();
             if(!cvs) return;
@@ -818,7 +1081,6 @@
             document.getElementById('zoomVal').textContent = Math.round(newZoom * 100) + '%';
         }
 
-// --- オブジェクト追加 (記号用：配置後に選択する) ---
         function addToActive(obj, ignorePosition = false) {
             const cvs = getActiveCanvas();
             if(cvs) {
@@ -826,7 +1088,7 @@
                     obj.set({ left: 100, top: 100 });
                 }
                 cvs.add(obj);
-                cvs.setActiveObject(obj); // 配置後に選択状態にする
+                cvs.setActiveObject(obj);
                 saveHistory(activeCanvasId);
             }
         }
@@ -835,12 +1097,11 @@
             if(cvs) {
                 obj.set({ left: 100, top: 100, lockScalingX: lock, lockScalingY: lock });
                 cvs.add(obj);
-                cvs.setActiveObject(obj); // 配置後に選択状態にする
+                cvs.setActiveObject(obj); 
                 saveHistory(activeCanvasId);
             }
         }
 
-        // ★追加：オブジェクト追加 (備品用：配置後に選択しない)
         function addToActiveNoSelect(obj, ignorePosition = false) {
             const cvs = getActiveCanvas();
             if(cvs) {
@@ -848,7 +1109,7 @@
                     obj.set({ left: 100, top: 100 });
                 }
                 cvs.add(obj);
-                cvs.requestRenderAll(); // 描画更新のみ
+                cvs.requestRenderAll(); 
                 saveHistory(activeCanvasId);
             }
         }
@@ -857,19 +1118,18 @@
             if(cvs) {
                 obj.set({ left: 100, top: 100, lockScalingX: lock, lockScalingY: lock });
                 cvs.add(obj);
-                cvs.requestRenderAll(); // 描画更新のみ
+                cvs.requestRenderAll(); 
                 saveHistory(activeCanvasId);
             }
         }
 
-        // --- 備品追加 (選択しない版に変更) ---
         function addLine() { 
             const line = new fabric.Line([0, 0, 100, 0], { stroke: '#000000', strokeWidth: 2, strokeUniform: true });
-            addToActive(line); // 記号は選択する
+            addToActive(line); 
         }
         function addArrow() { 
             const p = new fabric.Path('M 0 0 L 80 0 L 70 -5 M 80 0 L 70 5', { stroke: 'black', strokeWidth: 2, fill: 'transparent', strokeUniform: true });
-            addToActive(p); // 記号は選択する
+            addToActive(p); 
         }
         function addRectShape() { addToActive(new fabric.Rect({ width: 150, height: 65, fill: 'white', stroke: 'black', strokeWidth: 1, strokeUniform: true })); } 
         function addCircleShape() { addToActive(new fabric.Circle({ radius: 22.5, fill: 'white', stroke: 'black', strokeWidth: 1, strokeUniform: true })); } 
@@ -884,30 +1144,19 @@
         }
         function addText() { addToActive(new fabric.IText('テキスト', { fontSize: 20, fill: '#333', fontFamily: DEFAULT_FONT })); }
         
-        // --- 以下、備品系は NoSelect 系を使用 ---
         function addPiano() {
             const body = new fabric.Path("M 0 0 L 0 80 L 32 80 Q 51.28 78.55 66 66 Q 80.6 54.81 99 55 L 121 53 Q 138.32 45.05 139 26 Q 140.16 8.0 124 0 L 0 0 Z", { fill: 'black' });
             const keyboard = new fabric.Rect({ left: 3, top: 7, width: 8, height: 66, fill: 'white' });
             const group = new fabric.Group([body, keyboard], { left: 396, top: 213, lockScalingX: true, lockScalingY: true });
             const cvs = getActiveCanvas(); 
-            if(cvs) { 
-                cvs.add(group); 
-                // cvs.setActiveObject(group); // 削除：選択しない
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId); 
-            }
+            if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         }
         function addSignboard() {
             const rect = new fabric.Rect({ width: 350, height: 15, fill: 'white', stroke: 'black', strokeWidth: 1, originX: 'center', originY: 'center' });
             const text = new fabric.Text("プ ラ ザ 枠", { fontSize: 10, fill: '#bdbdbd', originX: 'center', originY: 'center', top: -1, fontFamily: DEFAULT_FONT });
             const group = new fabric.Group([rect, text], { left: 420, top: 160, originX: 'center', originY: 'top', lockScalingX: true, lockScalingY: true });
             const cvs = getActiveCanvas(); 
-            if(cvs) { 
-                cvs.add(group); 
-                // cvs.setActiveObject(group); // 削除：選択しない
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId); 
-            }
+            if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         }
         function addHangingBanner() {
             const cvs = getActiveCanvas(); if(!cvs) return;
@@ -925,7 +1174,6 @@
             return new fabric.Group([stem, tri, circle, ...extras]);
         }
         
-        // 備品関数内の呼び出しを NoSelect 版に変更
         function addMic() { addToActiveFixedNoSelect(createMicGroup()); }
         function addStandMic() { addToActiveFixedNoSelect(createMicGroup([new fabric.Line([0, 35, 18, 35],{stroke:'black',strokeWidth:1}), new fabric.Line([9,30,9,35],{stroke:'black',strokeWidth:1})])); }
         function addWLMic() { addToActiveFixedNoSelect(createMicGroup([new fabric.Text("WL",{fontSize:10,left:15,top:15,fill:'black',fontFamily:DEFAULT_FONT})])); }
@@ -950,7 +1198,7 @@
             const head = new fabric.Circle({ radius: 5, fill: 'white', stroke: 'black', strokeWidth: 1, top: 2, left: 9.5 }); 
             const nose = new fabric.Circle({ radius: 2.5, fill: 'black', top: 9, left: 12 });
             const group = new fabric.Group([body, head, nose]);
-            addToActiveNoSelect(group); // 変更
+            addToActiveNoSelect(group); 
         }
         function addChair() { addToActiveFixedNoSelect(new fabric.Rect({ width: 23, height: 28, fill: 'white', stroke: 'black', strokeWidth: 1, rx: 3, ry: 3 })); }
         function addDeskStage() { addToActiveFixedNoSelect(new fabric.Rect({ width: 90, height: 30, fill: '#fff9c4', stroke: 'black', strokeWidth: 1 })); }
@@ -958,32 +1206,17 @@
         function addPodium() { 
             const obj = new fabric.Rect({ width: 59, height: 30, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 390, top: 295, lockScalingX: true, lockScalingY: true });
             const cvs = getActiveCanvas(); 
-            if(cvs) { 
-                cvs.add(obj); 
-                // cvs.setActiveObject(obj); // 削除
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId); 
-            }
+            if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         }
         function addEmceeDesk() { 
             const obj = new fabric.Rect({ width: 30, height: 25, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 92, top: 395, angle: 340, lockScalingX: true, lockScalingY: true }); 
             const cvs = getActiveCanvas(); 
-            if(cvs) { 
-                cvs.add(obj); 
-                // cvs.setActiveObject(obj); // 削除
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId); 
-            }
+            if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         }
         function addFlowerStand() { 
             const obj = new fabric.Rect({ width: 22, height: 22, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 362, top: 302, lockScalingX: true, lockScalingY: true }); 
             const cvs = getActiveCanvas(); 
-            if(cvs) { 
-                cvs.add(obj); 
-                // cvs.setActiveObject(obj); // 削除
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId); 
-            }
+            if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         }
         function addPlatform46() { addToActiveFixedNoSelect(new fabric.Rect({ width: 90, height: 60, fill: '#ffe0b2', stroke: 'black', strokeWidth: 1 })); }
         function addPlatform36() { addToActiveFixedNoSelect(new fabric.Rect({ width: 90, height: 45, fill: '#ffe0b2', stroke: 'black', strokeWidth: 1 })); }
@@ -992,22 +1225,12 @@
         function addConductor() { 
             const obj = new fabric.Rect({ width: 53, height: 55, fill: '#e0e0e0', stroke: 'black', strokeWidth: 1, left: 393, top: 372, lockScalingX: true, lockScalingY: true }); 
             const cvs = getActiveCanvas(); 
-            if(cvs) { 
-                cvs.add(obj); 
-                // cvs.setActiveObject(obj); // 削除
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId); 
-            }
+            if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         }
         function addStand() { 
             const group = new fabric.Group([new fabric.Path('M 0 0 Q 12.5 -4.0 25 0 L 25 9 L 0 9 Z', {fill: '#e0e0e0', stroke: 'black', strokeWidth: 1}), new fabric.Path('M 12.5 9 L 12.5 14 M 5 14 L 20 14', {fill: 'transparent', stroke: 'black', strokeWidth: 1})], { left: 100, top: 100, lockScalingX: true, lockScalingY: true });
             const cvs = getActiveCanvas(); 
-            if(cvs) { 
-                cvs.add(group); 
-                // cvs.setActiveObject(group); // 削除
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId); 
-            }
+            if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         }
         function addSpeaker() { addToActiveFixedNoSelect(new fabric.Group([new fabric.Rect({ width: 31, height: 20, fill: 'white', stroke: 'black', strokeWidth: 1 }), new fabric.Path("M 0 20 L 15.5 0 L 31 20 Z", { fill: 'transparent', stroke: 'black', strokeWidth: 1 })])); }
         function addImageObject(input) {
@@ -1017,7 +1240,6 @@
             reader.readAsDataURL(file); input.value = '';
         }
 
-        // --- レイヤー操作 (Background) ---
         function toggleLayer(layerId, drawFunc) {
             const cvs = getActiveCanvas(); if(!cvs) return;
             const data = getCanvasData(activeCanvasId); data.isBatchDrawing = true;
@@ -1119,13 +1341,18 @@
             data.isBatchDrawing = false; saveHistory(activeCanvasId);
         }
 
-        // --- スタイル操作 ---
         function updateObjStatus() {
             const cvs = getActiveCanvas(); if(!cvs) return;
             const active = cvs.getActiveObject();
+            
             if(active) {
                 if(active.strokeWidth!==undefined) document.getElementById('strokeWidth').value=active.strokeWidth;
                 if(active.opacity!==undefined) document.getElementById('opacityInput').value=Math.round(active.opacity*100);
+                
+                const rep = (active.type === 'activeSelection') ? active.getObjects()[0] : active;
+                if (rep.fontSize) {
+                    document.getElementById('fontSizeInput').value = rep.fontSize;
+                }
             }
         }
         function updateLayerButtonStates() {
@@ -1232,12 +1459,12 @@
         function ungroupObjects(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()&&c.getActiveObject().type==='group') { c.getActiveObject().toActiveSelection(); c.requestRenderAll(); saveHistory(activeCanvasId); } }
         function restoreBackgroundState(cvs) { cvs.getObjects().forEach(o=>{ if(o.isBackground){ o.set({selectable:false,evented:false}); cvs.sendToBack(o); } }); cvs.requestRenderAll(); updateLayerButtonStates(); }
 
-        // --- 保存・読み込み (Ver2.1対応) ---
         function saveAllJSON() {
             const dataToSave = canvasList.map(c => {
                 return {
                     title: '',
                     height: c.heightState,
+                    isMeetingSheet: c.isMeetingSheet || false, 
                     json: c.canvasObj.toJSON(PROPERTIES_TO_INCLUDE)
                 };
             });
@@ -1268,24 +1495,27 @@
         function importData(dataArray) {
             dataArray.forEach(d => {
                 let h = d.height || 500;
-                addNewCanvasBlock();
+                if(d.isMeetingSheet) {
+                    addMeetingCanvasBlock();
+                } else {
+                    addNewCanvasBlock();
+                }
                 const lastId = canvasList[canvasList.length-1].id;
                 const lastData = canvasList[canvasList.length-1];
                 
                 lastData.canvasObj.loadFromJSON(d.json, () => {
                     setCanvasHeight(lastId, h); 
-                    restoreBackgroundState(lastData.canvasObj);
+                    if(!d.isMeetingSheet) restoreBackgroundState(lastData.canvasObj);
+                    
                     lastData.history = [JSON.stringify(lastData.canvasObj.toJSON(PROPERTIES_TO_INCLUDE))];
                     lastData.historyStep = 0;
-                    markUnsaved(); // インポート直後も一応変更ありとする
+                    markUnsaved(); 
                 });
             });
         }
 
-// --- PDF保存 (ズーム倍率補正版) ---
         function saveCombinedPDF() {
             const { jsPDF } = window.jspdf;
-            
             const targets = canvasList.filter(c => {
                 const chk = document.getElementById('chk_' + c.id);
                 return chk && chk.checked;
@@ -1300,10 +1530,7 @@
                 if (index > 0) {
                     pdf.addPage('a4', isPortrait ? 'p' : 'l');
                 }
-
-                // ★ここが修正ポイント
                 const curZoom = c.canvasObj.getZoom();
-                // 画面が縮小されていても、実寸の1.5倍(高画質)で書き出されるように補正値を計算
                 const targetMultiplier = 1.5 / curZoom;
 
                 const imgData = c.canvasObj.toDataURL({ 
@@ -1330,7 +1557,6 @@
             pdf.save((d&&n) ? `${d}_${n}.pdf` : `stage_plan.pdf`);
         }
 
-        // --- JPG連結保存 (ズーム倍率補正版) ---
         function saveCombinedJPG() {
             const targets = canvasList.filter(c => {
                 const chk = document.getElementById('chk_' + c.id);
@@ -1340,10 +1566,7 @@
 
             let totalH = 0;
             targets.forEach(c => totalH += c.heightState);
-            
-            // 連結用キャンバスは常に原寸(840px幅)で作る
             const w = BASE_WIDTH;
-            
             const comboCanvas = document.createElement('canvas');
             comboCanvas.width = w;
             comboCanvas.height = totalH;
@@ -1356,12 +1579,8 @@
                 return new Promise(resolve => {
                     const img = new Image();
                     img.onload = () => resolve({ img, h: c.heightState });
-                    
-                    // ★ここが修正ポイント
                     const curZoom = c.canvasObj.getZoom();
-                    // 画面が50%なら2倍、200%なら0.5倍して、常に「1.0(原寸)」になるようにする
                     const targetMultiplier = 1.0 / curZoom;
-
                     img.src = c.canvasObj.toDataURL({ 
                         format: 'png', 
                         multiplier: targetMultiplier 
@@ -1372,11 +1591,9 @@
             Promise.all(promises).then(images => {
                 let y = 0;
                 images.forEach(item => {
-                    // item.img は原寸サイズになっているので、そのまま描画すればOK
                     ctx.drawImage(item.img, 0, y, w, item.h);
                     y += item.h;
                 });
-                
                 const d=document.getElementById('eventDate').value; const n=document.getElementById('eventName').value.trim(); 
                 const a = document.createElement('a');
                 a.href = comboCanvas.toDataURL('image/jpeg', 0.9);
@@ -1385,7 +1602,6 @@
             });
         }
         
-        // --- 複製機能 ---
         function duplicateActiveCanvas() {
             const sourceId = activeCanvasId;
             const sourceData = getCanvasData(sourceId);
@@ -1398,21 +1614,23 @@
             const json = sourceData.canvasObj.toJSON(PROPERTIES_TO_INCLUDE);
             const height = sourceData.heightState;
 
-            addNewCanvasBlock('複製図面');
-            
+            if (sourceData.isMeetingSheet) {
+                addMeetingCanvasBlock();
+            } else {
+                addNewCanvasBlock('複製図面');
+            }
             const newData = canvasList[canvasList.length - 1]; 
 
             newData.canvasObj.loadFromJSON(json, function() {
                 setCanvasHeight(newData.id, height);
-                restoreBackgroundState(newData.canvasObj);
+                if(!sourceData.isMeetingSheet) restoreBackgroundState(newData.canvasObj);
                 newData.history = [JSON.stringify(newData.canvasObj.toJSON(PROPERTIES_TO_INCLUDE))];
                 newData.historyStep = 0;
                 updateHeightButtons(newData.id, height);
-                markUnsaved(); // 複製も変更扱い
+                markUnsaved(); 
             });
         }
 
-        // --- キーボードイベント ---
         window.addEventListener('keydown', e => {
             if(document.activeElement.tagName==='INPUT') return;
             const cvs = getActiveCanvas();
@@ -1431,10 +1649,33 @@
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 const a = cvs.getActiveObject();
                 if (a && !a.isEditing) {
-                    cvs.discardActiveObject();
-                    if (a.type === 'activeSelection') a.getObjects().forEach(o => cvs.remove(o));
-                    else cvs.remove(a);
-                    saveHistory(activeCanvasId);
+                    
+                    // 1. 複数選択されている場合
+                    if (a.type === 'activeSelection') {
+                        const objects = a.getObjects();
+                        cvs.discardActiveObject(); // 選択状態を解除
+                        
+                        // 削除禁止(isPermanent)でないものだけを選んで削除
+                        let removed = false;
+                        objects.forEach(o => {
+                            if (!o.isPermanent) {
+                                cvs.remove(o);
+                                removed = true;
+                            }
+                        });
+                        
+                        if(removed) saveHistory(activeCanvasId);
+                        cvs.requestRenderAll();
+                    }
+                    // 2. 単体選択の場合
+                    else {
+                        // 削除禁止でなければ削除
+                        if (!a.isPermanent) {
+                            cvs.discardActiveObject();
+                            cvs.remove(a);
+                            saveHistory(activeCanvasId);
+                        }
+                    }
                 }
             }
 
@@ -1451,7 +1692,6 @@
                 cvs.renderAll();
             }
         });
-
     </script>
 </body>
 </html>
