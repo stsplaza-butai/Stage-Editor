@@ -7,9 +7,7 @@ HTMLベースの簡易図面エディターです。
 ・Webブラウザ（Chrome / Edge 推奨）
 
 ローカル実行するには以下のファイルを同じ場所に置いてください。
-index.html
-fabric.min.js
-jspdf.umd.min.js
+index.html / fabric.min.js / jspdf.umd.min.js
 
 使い方
 1. index.html をブラウザで開く
