@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>舞台図面エディター Ver2.7</title>
+    <title>舞台図面エディター Ver2.9</title>
     <script src="fabric.min.js"></script>
     <script src="jspdf.umd.min.js"></script>
     
@@ -194,7 +194,7 @@
 <body>
 
     <header>
-        <div class="title">舞台図面エディター Ver2.7</div>
+        <div class="title">舞台図面エディター Ver2.9</div>
         <div class="input-group"><label>📅</label><input type="date" id="eventDate"></div>
         <div class="input-group"><label>🏷️</label><input type="text" id="eventName" placeholder="イベント名"></div>
         <div class="input-group"><label>📍</label><input type="text" id="eventPlace" placeholder="場所"></div>
@@ -268,6 +268,8 @@
                 <button id="btn-daikoku" onclick="toggleLayer('daikoku', addDaikokuMaku)" class="item-btn" style="background:#ce93d8;">大黒幕</button>
                 <button id="btn-reflect" onclick="toggleLayer('reflect', addReflectingBoard)" class="item-btn" style="background:#fff9c4;">反響板</button>
                 <button id="btn-doncho" onclick="toggleLayer('doncho', addDoncho)" class="item-btn" style="background:#c8e6c9;">緞帳</button>
+                <button id="btn-battens" onclick="toggleLayer('battens', addBattens)" class="item-btn" style="background:#b3e5fc;">吊バトン</button>
+                <button id="btn-lighting" onclick="toggleLayer('lighting', addLightingBattens)" class="item-btn" style="background:#fff59d;">照明バトン</button>
             </div>
             <div class="grid-2" style="margin-top:2px;">
                 <button onclick="addFrontAudience()" class="item-btn" style="background:#ffccbc;">客席(前方)</button>
@@ -505,7 +507,7 @@
             }
         }
 
-        // --- キャンバス追加・管理（修正版） ---
+        // --- キャンバス追加・管理 ---
         function addNewCanvasBlock(title = '新規図面') {
             const id = 'canvas_' + Date.now();
             const container = document.getElementById('canvasContainer');
@@ -537,7 +539,6 @@
             const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
             fCanvas.backgroundColor = "white";
             
-            // ★修正：初期ズームを 1 (100%) に設定
             fCanvas.setZoom(1); 
             
             const canvasData = {
@@ -554,240 +555,197 @@
             drawDefaultBackground(fCanvas, 500);
             updateHeightButtons(id, 500);
             
-            // ★修正：初期寸法もズーム1.0で計算
             fCanvas.setDimensions({ width: BASE_WIDTH, height: 500 });
             
             setupCanvasEvents(fCanvas, id);
             activateCanvas(id);
             saveHistory(id); 
             
-            // ズーム表示を更新
             document.getElementById('zoomVal').textContent = '100%';
         }
 
-function addMeetingCanvasBlock() {
-    const id = 'canvas_' + Date.now();
-    const container = document.getElementById('canvasContainer');
-    const addBtnContainer = container.querySelector('div[style*="display:flex"]');
+        function addMeetingCanvasBlock() {
+            const id = 'canvas_' + Date.now();
+            const container = document.getElementById('canvasContainer');
+            const addBtnContainer = container.querySelector('div[style*="display:flex"]');
 
-    const block = document.createElement('div');
-    block.className = 'canvas-block';
-    block.id = 'block_' + id;
-    
-    // ★修正：ヘッダーのデザイン変更
-    block.innerHTML = `
-        <div class="block-header" style="background:#e0f2f1; border-bottom:1px solid #b2dfdb;">
-            <div class="block-ctrl-group">
-                <span class="block-label" style="color:#00695c; font-size:14px;">📋 打合せ表</span>
-            </div>
+            const block = document.createElement('div');
+            block.className = 'canvas-block';
+            block.id = 'block_' + id;
             
-            <label style="font-size:11px; margin-left:15px; cursor:pointer;">
-                <input type="checkbox" id="chk_${id}" checked> 🖨️ 印刷
-            </label>
+            block.innerHTML = `
+                <div class="block-header" style="background:#e0f2f1; border-bottom:1px solid #b2dfdb;">
+                    <div class="block-ctrl-group">
+                        <span class="block-label" style="color:#00695c; font-size:14px;">📋 打合せ表</span>
+                    </div>
+                    
+                    <label style="font-size:11px; margin-left:15px; cursor:pointer;">
+                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 印刷
+                    </label>
 
-            <span style="font-size:11px; margin-left:15px; color:#555;">
-                <span style="display:inline-block; width:10px; height:10px; background:#c8e6c9; border:1px solid #999; margin-right:2px; vertical-align:middle;"></span>通常
-                <span style="display:inline-block; width:10px; height:10px; background:#ffcdd2; border:1px solid #999; margin-left:8px; margin-right:2px; vertical-align:middle;"></span>倍額
-            </span>
+                    <span style="font-size:11px; margin-left:15px; color:#555;">
+                        <span style="display:inline-block; width:10px; height:10px; background:#c8e6c9; border:1px solid #999; margin-right:2px; vertical-align:middle;"></span>通常
+                        <span style="display:inline-block; width:10px; height:10px; background:#ffcdd2; border:1px solid #999; margin-left:8px; margin-right:2px; vertical-align:middle;"></span>倍額
+                    </span>
 
-            <button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}')">🗑️ 削除</button>
-        </div>
-        <div class="canvas-wrapper" onclick="activateCanvas('${id}')">
-            <canvas id="${id}" width="840" height="1188"></canvas>
-        </div>
-    `;
-    
-    container.insertBefore(block, addBtnContainer); 
+                    <button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}')">🗑️ 削除</button>
+                </div>
+                <div class="canvas-wrapper" onclick="activateCanvas('${id}')">
+                    <canvas id="${id}" width="840" height="1188"></canvas>
+                </div>
+            `;
+            
+            container.insertBefore(block, addBtnContainer); 
 
-    const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
-    fCanvas.backgroundColor = "white";
-    fCanvas.setZoom(1); 
-    
-    const canvasData = {
-        id: id,
-        canvasObj: fCanvas,
-        history: [],
-        historyStep: -1,
-        isHistoryLocked: false,
-        heightState: 1188,
-        blockElement: block,
-        isMeetingSheet: true
-    };
-    canvasList.push(canvasData);
+            const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
+            fCanvas.backgroundColor = "white";
+            fCanvas.setZoom(1); 
+            
+            const canvasData = {
+                id: id,
+                canvasObj: fCanvas,
+                history: [],
+                historyStep: -1,
+                isHistoryLocked: false,
+                heightState: 1188,
+                blockElement: block,
+                isMeetingSheet: true
+            };
+            canvasList.push(canvasData);
 
-    drawMeetingTable(fCanvas);
-    
-    fCanvas.setDimensions({ width: 840, height: 1188 });
-    setupCanvasEvents(fCanvas, id);
-    activateCanvas(id);
-    saveHistory(id); 
-    
-    document.getElementById('zoomVal').textContent = '100%';
-}
-
-// --- ヘルパー関数：チェックボックスの列を描画（間隔調整版） ---
-function drawCheckboxRow(cvs, startX, startY, items) {
-    let currentX = startX;
-    items.forEach(label => {
-        const uid = 'cb_' + Date.now() + '_' + Math.random();
-        
-        // 1. ボックス
-        const box = new fabric.Rect({
-            left: currentX, top: startY, width: 14, height: 14,
-            fill: 'white', stroke: 'black', strokeWidth: 1,
-            selectable: false, evented: true, hoverCursor: 'pointer',
-            isPermanent: true, isCheckboxBox: true, checkboxId: uid
-        });
-        
-        // 2. チェックマーク
-        const mark = new fabric.Text('✔', {
-            left: currentX + 1, top: startY - 2, fontSize: 14, fill: 'black',
-            selectable: false, evented: false, visible: false,
-            isPermanent: true, isCheckMark: true, checkboxId: uid
-        });
-        
-        // 3. ラベル文字
-        const text = new fabric.Text(label, {
-            left: currentX + 18, top: startY + 1, fontSize: 12, fill: 'black',
-            fontFamily: DEFAULT_FONT, selectable: false, evented: false,
-            isPermanent: true
-        });
-        
-        cvs.add(box);
-        cvs.add(mark);
-        cvs.add(text);
-        
-        // 次のアイテムの位置（余白を20pxから10pxに短縮して、舞台の項目が収まるように調整）
-        currentX += (18 + text.width + 10);
-    });
-}
-
-function drawMeetingTable(cvs) {
-    const HEADER_H = 60;
-    const ROW_H = 15;
-    const ROWS_COUNT = 60; 
-    const TIME_TABLE_W = 400;
-    const TECH_COL_W = 440;
-    
-    // ... (共通スタイルやヘッダー・データ行・罫線の描画コードは変更なし) ...
-    // ... (前回までの長いコード部分は省略せずそのまま使います) ...
-    
-    const borderStyle = { stroke: '#000', strokeWidth: 1, selectable: false, evented: false };
-    const textStyle = { fontFamily: DEFAULT_FONT, fill: '#000', selectable: false, evented: false };
-    const headerFill = '#bdbdbd'; 
-
-    // 1. 左上：タイムテーブル
-    const colWidths = [30, 30, 200, 30, 30, 20, 20, 20, 20];
-    const headerTexts = ["区", "時", "内容", "ホ", "多", "A", "B", "C", "D"];
-    let currentX = 0;
-    colWidths.forEach((w, i) => {
-        cvs.add(new fabric.Rect({ left: currentX, top: 0, width: w, height: HEADER_H, fill: headerFill, ...borderStyle }));
-        cvs.add(new fabric.Text(headerTexts[i], { left: currentX + w/2, top: HEADER_H/2, fontSize: 14, originX:'center', originY:'center', ...textStyle }));
-        currentX += w;
-    });
-
-    // データ行
-    const zoneGroups = [ { start: 0, len: 6, text: "前延長" }, { start: 6, len: 12, text: "午前" }, { start: 18, len: 4, text: "" }, { start: 22, len: 16, text: "午後" }, { start: 38, len: 4, text: "" }, { start: 42, len: 18, text: "夜間" } ];
-    const xPos = [0]; for(let i=0; i<colWidths.length; i++) xPos.push(xPos[i] + colWidths[i]);
-
-    for (let r = 0; r < ROWS_COUNT; r++) {
-        const topY = HEADER_H + (r * ROW_H);
-        const zone = zoneGroups.find(z => z.start === r);
-        if (zone) {
-            const h = zone.len * ROW_H;
-            cvs.add(new fabric.Rect({ left: xPos[0], top: topY, width: colWidths[0], height: h, fill: 'white', ...borderStyle }));
-            const vertText = zone.text.split('').join('\n');
-            cvs.add(new fabric.Text(vertText, { left: xPos[0] + colWidths[0]/2, top: topY + h/2, fontSize: 12, originX:'center', originY:'center', ...textStyle }));
+            drawMeetingTable(fCanvas);
+            
+            fCanvas.setDimensions({ width: 840, height: 1188 });
+            setupCanvasEvents(fCanvas, id);
+            activateCanvas(id);
+            saveHistory(id); 
+            
+            document.getElementById('zoomVal').textContent = '100%';
         }
-        cvs.add(new fabric.Rect({ left: xPos[1], top: topY, width: colWidths[1] + colWidths[2], height: ROW_H, fill: 'white', stroke: '#f5f5f5', strokeWidth: 1, selectable: false, evented: true, hoverCursor: 'pointer', isCell: true, colorType: 'Content' }));
-        if ((r - 2) % 4 === 0) {
-            const hour = 8 + (r - 2) / 4;
-            if (hour <= 22) {
-                cvs.add(new fabric.Text(`${hour}:00`, { left: xPos[1] + colWidths[1]/2, top: topY, fontSize: 10, originX:'center', originY:'center', backgroundColor:'transparent', ...textStyle }));
+
+        // --- ヘルパー関数：チェックボックスの列を描画 ---
+        function drawCheckboxRow(cvs, startX, startY, items) {
+            let currentX = startX;
+            items.forEach(label => {
+                const uid = 'cb_' + Date.now() + '_' + Math.random();
+                const box = new fabric.Rect({
+                    left: currentX, top: startY, width: 14, height: 14,
+                    fill: 'white', stroke: 'black', strokeWidth: 1,
+                    selectable: false, evented: true, hoverCursor: 'pointer',
+                    isPermanent: true, isCheckboxBox: true, checkboxId: uid
+                });
+                const mark = new fabric.Text('✔', {
+                    left: currentX + 1, top: startY - 2, fontSize: 14, fill: 'black',
+                    selectable: false, evented: false, visible: false,
+                    isPermanent: true, isCheckMark: true, checkboxId: uid
+                });
+                const text = new fabric.Text(label, {
+                    left: currentX + 18, top: startY + 1, fontSize: 12, fill: 'black',
+                    fontFamily: DEFAULT_FONT, selectable: false, evented: false,
+                    isPermanent: true
+                });
+                cvs.add(box); cvs.add(mark); cvs.add(text);
+                currentX += (18 + text.width + 10);
+            });
+        }
+
+        function drawMeetingTable(cvs) {
+            const HEADER_H = 60; const ROW_H = 15; const ROWS_COUNT = 60; const TIME_TABLE_W = 400; const TECH_COL_W = 440;
+            const borderStyle = { stroke: '#000', strokeWidth: 1, selectable: false, evented: false };
+            const textStyle = { fontFamily: DEFAULT_FONT, fill: '#000', selectable: false, evented: false };
+            const headerFill = '#bdbdbd'; 
+
+            const colWidths = [30, 30, 200, 30, 30, 20, 20, 20, 20];
+            const headerTexts = ["区", "時", "内容", "ホ", "多", "A", "B", "C", "D"];
+            let currentX = 0;
+            colWidths.forEach((w, i) => {
+                cvs.add(new fabric.Rect({ left: currentX, top: 0, width: w, height: HEADER_H, fill: headerFill, ...borderStyle }));
+                cvs.add(new fabric.Text(headerTexts[i], { left: currentX + w/2, top: HEADER_H/2, fontSize: 14, originX:'center', originY:'center', ...textStyle }));
+                currentX += w;
+            });
+
+            const zoneGroups = [ { start: 0, len: 6, text: "前延長" }, { start: 6, len: 12, text: "午前" }, { start: 18, len: 4, text: "" }, { start: 22, len: 16, text: "午後" }, { start: 38, len: 4, text: "" }, { start: 42, len: 18, text: "夜間" } ];
+            const xPos = [0]; for(let i=0; i<colWidths.length; i++) xPos.push(xPos[i] + colWidths[i]);
+
+            for (let r = 0; r < ROWS_COUNT; r++) {
+                const topY = HEADER_H + (r * ROW_H);
+                const zone = zoneGroups.find(z => z.start === r);
+                if (zone) {
+                    const h = zone.len * ROW_H;
+                    cvs.add(new fabric.Rect({ left: xPos[0], top: topY, width: colWidths[0], height: h, fill: 'white', ...borderStyle }));
+                    const vertText = zone.text.split('').join('\n');
+                    cvs.add(new fabric.Text(vertText, { left: xPos[0] + colWidths[0]/2, top: topY + h/2, fontSize: 12, originX:'center', originY:'center', ...textStyle }));
+                }
+                cvs.add(new fabric.Rect({ left: xPos[1], top: topY, width: colWidths[1] + colWidths[2], height: ROW_H, fill: 'white', stroke: '#f5f5f5', strokeWidth: 1, selectable: false, evented: true, hoverCursor: 'pointer', isCell: true, colorType: 'Content' }));
+                if ((r - 2) % 4 === 0) {
+                    const hour = 8 + (r - 2) / 4;
+                    if (hour <= 22) {
+                        cvs.add(new fabric.Text(`${hour}:00`, { left: xPos[1] + colWidths[1]/2, top: topY, fontSize: 10, originX:'center', originY:'center', backgroundColor:'transparent', ...textStyle }));
+                    }
+                }
+                if (zone) {
+                    const h = zone.len * ROW_H;
+                    for (let c = 3; c <= 8; c++) {
+                        cvs.add(new fabric.Rect({ left: xPos[c], top: topY, width: colWidths[c], height: h, fill: 'white', stroke: 'black', strokeWidth: 1, selectable: false, evented: true, hoverCursor: 'pointer', isCell: true, colorType: 'Checkbox' }));
+                    }
+                }
             }
+            
+            const tableBottomY = HEADER_H + (ROWS_COUNT * ROW_H);
+            cvs.add(new fabric.Line([xPos[1], HEADER_H, xPos[3], HEADER_H], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+            cvs.add(new fabric.Line([xPos[1], HEADER_H, xPos[1], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+            cvs.add(new fabric.Line([xPos[3], HEADER_H, xPos[3], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+            cvs.add(new fabric.Line([xPos[1], tableBottomY, xPos[3], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+            cvs.add(new fabric.Line([0, tableBottomY, TIME_TABLE_W, tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
+
+            const contentLines = "\n".repeat(118); 
+            cvs.add(new fabric.Textbox(contentLines, {
+                left: 60 + 10, top: HEADER_H, width: 180 - 10, height: 960, 
+                fontSize: 14, lineHeight: 0.475, fontFamily: DEFAULT_FONT, fill: '#000',
+                splitByGrapheme: true, backgroundColor: 'transparent',
+                lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
+                hasControls: false, hoverCursor: 'text', isPermanent: true 
+            }));
+
+            const techH = 240;
+            const techSections = [
+                { label: "舞台", y: 0, items: ["緞帳", "バトン操作", "ピアノ調律", "吊り物あり", "プラザ枠"] },
+                { label: "音響", y: 240, items: ["叩き", "録音", "音声送り"] },
+                { label: "照明", y: 480, items: ["講演会", "要望"] },
+                { label: "映像", y: 720, items: ["調整室PJ", "動画あり"] }
+            ];
+            
+            techSections.forEach((sec, i) => {
+                const topY = sec.y;
+                cvs.add(new fabric.Rect({ left: TIME_TABLE_W, top: topY, width: TECH_COL_W, height: techH, fill: 'white', ...borderStyle }));
+                cvs.add(new fabric.Text(sec.label, { left: TIME_TABLE_W + 5, top: topY + 5, fontSize: 15, ...textStyle }));
+                drawCheckboxRow(cvs, TIME_TABLE_W + 50, topY + 15, sec.items);
+                
+                const techLines = "\n".repeat(9);
+                cvs.add(new fabric.Textbox(techLines, {
+                    left: TIME_TABLE_W + 15, top: topY + 45, width: TECH_COL_W - 30, 
+                    fontSize: 14, fontFamily: DEFAULT_FONT, fill: '#000',
+                    splitByGrapheme: true, lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
+                    hasControls: false, hoverCursor: 'text', isPermanent: true 
+                }));
+            });
+
+            const REMARKS_Y = 960; const REMARKS_H = 1188 - 960;
+            cvs.add(new fabric.Rect({ left: 0, top: REMARKS_Y, width: 840, height: REMARKS_H, fill: 'white', ...borderStyle }));
+            cvs.add(new fabric.Text("備考", { left: 5, top: REMARKS_Y + 5, fontSize: 15, ...textStyle }));
+            drawCheckboxRow(cvs, 50, REMARKS_Y + 15, ["空調指定", "ホワイエ販売", "２階展示ボード", "後納"]);
+            
+            const remarkLines = "\n".repeat(9);
+            cvs.add(new fabric.Textbox(remarkLines, {
+                left: 5 + 5, top: REMARKS_Y + 45, width: 840 - 30, 
+                fontSize: 14, fontFamily: DEFAULT_FONT, fill: '#000',
+                splitByGrapheme: true, lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
+                hasControls: false, hoverCursor: 'text', isPermanent: true 
+            }));
+
+            cvs.add(new fabric.Rect({ left: 1, top: 1, width: 840 - 2, height: 1188 - 2, fill: 'transparent', stroke: 'black', strokeWidth: 1, selectable: false, evented: false }));
+            cvs.requestRenderAll();
         }
-        if (zone) {
-            const h = zone.len * ROW_H;
-            for (let c = 3; c <= 8; c++) {
-                cvs.add(new fabric.Rect({ left: xPos[c], top: topY, width: colWidths[c], height: h, fill: 'white', stroke: 'black', strokeWidth: 1, selectable: false, evented: true, hoverCursor: 'pointer', isCell: true, colorType: 'Checkbox' }));
-            }
-        }
-    }
-    
-    // 罫線補正
-    const tableBottomY = HEADER_H + (ROWS_COUNT * ROW_H);
-    cvs.add(new fabric.Line([xPos[1], HEADER_H, xPos[3], HEADER_H], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
-    cvs.add(new fabric.Line([xPos[1], HEADER_H, xPos[1], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
-    cvs.add(new fabric.Line([xPos[3], HEADER_H, xPos[3], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
-    cvs.add(new fabric.Line([xPos[1], tableBottomY, xPos[3], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
-    cvs.add(new fabric.Line([0, tableBottomY, TIME_TABLE_W, tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
-
-// --- 内容列テキスト ---
-    const contentLines = "\n".repeat(118); 
-    cvs.add(new fabric.Textbox(contentLines, {
-        left: 60 + 10, top: HEADER_H, width: 180 - 10, height: 960, 
-        
-        fontSize: 14, 
-        lineHeight: 0.475, // ★ここを追加（15px ÷ 14px の結果を設定）
-        
-        fontFamily: DEFAULT_FONT, fill: '#000',
-        splitByGrapheme: true, backgroundColor: 'transparent',
-        lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
-        hasControls: false, hoverCursor: 'text',
-        isPermanent: true 
-    }));
-
-    // --- 技術欄 ---
-    const techH = 240;
-    const techSections = [
-        { label: "舞台", y: 0, items: ["緞帳", "バトン操作", "ピアノ調律", "吊り物あり", "プラザ枠"] },
-        { label: "音響", y: 240, items: ["叩き", "録音", "音声送り"] },
-        { label: "照明", y: 480, items: ["講演会", "要望"] },
-        { label: "映像", y: 720, items: ["調整室PJ", "動画あり"] }
-    ];
-    
-    techSections.forEach((sec, i) => {
-        const topY = sec.y;
-        cvs.add(new fabric.Rect({ left: TIME_TABLE_W, top: topY, width: TECH_COL_W, height: techH, fill: 'white', ...borderStyle }));
-        cvs.add(new fabric.Text(sec.label, { left: TIME_TABLE_W + 5, top: topY + 5, fontSize: 15, ...textStyle }));
-        drawCheckboxRow(cvs, TIME_TABLE_W + 50, topY + 15, sec.items);
-        
-        // ★修正：fontSize 14
-        const techLines = "\n".repeat(9);
-        cvs.add(new fabric.Textbox(techLines, {
-            left: TIME_TABLE_W + 15, top: topY + 45, width: TECH_COL_W - 30, 
-            fontSize: 14, // ★修正
-            fontFamily: DEFAULT_FONT, fill: '#000',
-            splitByGrapheme: true,
-            lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
-            hasControls: false, hoverCursor: 'text',
-            isPermanent: true 
-        }));
-    });
-
-    // --- 備考欄 ---
-    const REMARKS_Y = 960; const REMARKS_H = 1188 - 960;
-    cvs.add(new fabric.Rect({ left: 0, top: REMARKS_Y, width: 840, height: REMARKS_H, fill: 'white', ...borderStyle }));
-    cvs.add(new fabric.Text("備考", { left: 5, top: REMARKS_Y + 5, fontSize: 15, ...textStyle }));
-    drawCheckboxRow(cvs, 50, REMARKS_Y + 15, ["空調指定", "ホワイエ販売", "２階展示ボード", "後納"]);
-    
-    // ★修正：fontSize 14
-    const remarkLines = "\n".repeat(9);
-    cvs.add(new fabric.Textbox(remarkLines, {
-        left: 5 + 5, top: REMARKS_Y + 45, width: 840 - 30, 
-        fontSize: 14, // ★修正
-        fontFamily: DEFAULT_FONT, fill: '#000',
-        splitByGrapheme: true,
-        lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
-        hasControls: false, hoverCursor: 'text',
-        isPermanent: true 
-    }));
-
-    // 全体の外枠
-    cvs.add(new fabric.Rect({ left: 1, top: 1, width: 840 - 2, height: 1188 - 2, fill: 'transparent', stroke: 'black', strokeWidth: 1, selectable: false, evented: false }));
-
-    cvs.requestRenderAll();
-}
 
         function deleteCanvasBlock(id) {
             if(!confirm('この図面を削除しますか？')) return;
@@ -806,10 +764,7 @@ function drawMeetingTable(cvs) {
             if (idx > -1) {
                 const target = canvasList[idx];
                 target.blockElement.classList.add('active');
-                
-                // --- 修正箇所：文言変更 ---
                 document.getElementById('activeCanvasName').textContent = `キャンバス ${idx + 1}`;
-                
                 const zoomVal = target.canvasObj.getZoom();
                 document.getElementById('zoomVal').textContent = Math.round(zoomVal * 100) + '%';
                 updateLayerButtonStates();
@@ -819,46 +774,24 @@ function drawMeetingTable(cvs) {
         function getActiveCanvas() { if(!activeCanvasId && canvasList.length > 0) activateCanvas(canvasList[0].id); return canvasList.find(c => c.id === activeCanvasId)?.canvasObj; }
         function getCanvasData(id) { return canvasList.find(c => c.id === id); }
 
-        // --- キャンバス高さ制御（修正版） ---
         function setCanvasHeight(id, height, btn) {
             const data = canvasList.find(c => c.id === id);
             if(!data) return;
-        
             data.heightState = height;
-        
-            // ★追加：図面キャンバスの場合、サイズに合わせてズームを自動変更
             if (!data.isMeetingSheet) {
                 let newZoom = 1;
-                if (height === 500) newZoom = 1;       // 小: 100%
-                else if (height === 1000) newZoom = 0.8; // 中: 80%
-                else if (height === 1650) newZoom = 0.5; // 大: 50%
-            
+                if (height === 500) newZoom = 1; else if (height === 1000) newZoom = 0.8; else if (height === 1650) newZoom = 0.5;
                 data.canvasObj.setZoom(newZoom);
-            
-            // 画面右下のズーム表示も更新
-                if (activeCanvasId === id) {
-                document.getElementById('zoomVal').textContent = Math.round(newZoom * 100) + '%';
-                }
+                if (activeCanvasId === id) { document.getElementById('zoomVal').textContent = Math.round(newZoom * 100) + '%'; }
             }
-
-            // 現在のズーム率を取得して寸法を設定
             const curZoom = data.canvasObj.getZoom();
-            data.canvasObj.setDimensions({ 
-                width: BASE_WIDTH * curZoom, 
-                height: height * curZoom 
-            });
-        
+            data.canvasObj.setDimensions({ width: BASE_WIDTH * curZoom, height: height * curZoom });
             if(data.isMeetingSheet) {
-                data.canvasObj.clear();
-                data.canvasObj.backgroundColor = "white";
-                drawMeetingTable(data.canvasObj);
+                data.canvasObj.clear(); data.canvasObj.backgroundColor = "white"; drawMeetingTable(data.canvasObj);
             } else {
                 drawDefaultBackground(data.canvasObj, height);
             }
-
-            updateHeightButtons(id, height);
-            activateCanvas(id);
-            saveHistory(id);
+            updateHeightButtons(id, height); activateCanvas(id); saveHistory(id);
         }
 
         function updateHeightButtons(id, height) {
@@ -870,31 +803,20 @@ function drawMeetingTable(cvs) {
             cvs.on('object:added', (e) => { if(!e.target.excludeFromExport && !getCanvasData(id).isBatchDrawing) saveHistory(id); });
             cvs.on('object:modified', () => saveHistory(id));
             cvs.on('object:removed', () => { if(!getCanvasData(id).isBatchDrawing) saveHistory(id); });
-            
-            cvs.on('mouse:move', (opt) => {
-                if(id === activeCanvasId) { const p = cvs.getPointer(opt.e); document.getElementById('mouseCoords').textContent = `X: ${Math.round(p.x)} Y: ${Math.round(p.y)}`; }
-            });
-            
+            cvs.on('mouse:move', (opt) => { if(id === activeCanvasId) { const p = cvs.getPointer(opt.e); document.getElementById('mouseCoords').textContent = `X: ${Math.round(p.x)} Y: ${Math.round(p.y)}`; } });
             cvs.on('selection:created', updateObjStatus); cvs.on('selection:updated', updateObjStatus); cvs.on('selection:cleared', updateObjStatus); cvs.on('object:modified', updateObjStatus); cvs.on('object:rotating', updateObjStatus);
-            
             cvs.on('mouse:down', function(opt) {
                 if(activeCanvasId !== id) activateCanvas(id);
-                
                 if (opt.target && opt.target.isCheckboxBox) {
-                    const uid = opt.target.checkboxId;
-                    const objects = cvs.getObjects();
-                    const mark = objects.find(o => o.isCheckMark && o.checkboxId === uid);
-                    if (mark) { mark.set('visible', !mark.visible); cvs.requestRenderAll(); saveHistory(id); }
-                    return; 
+                    const uid = opt.target.checkboxId; const objects = cvs.getObjects(); const mark = objects.find(o => o.isCheckMark && o.checkboxId === uid);
+                    if (mark) { mark.set('visible', !mark.visible); cvs.requestRenderAll(); saveHistory(id); } return; 
                 }
-
                 if (opt.target && opt.target.isCell) {
                     const type = opt.target.colorType; const curr = opt.target.fill; let nextColor = 'white';
                     if (type === 'Content') { if (curr === 'white') nextColor = '#fff9c4'; else nextColor = 'white'; } 
                     else if (type === 'Checkbox') { if (curr === 'white') nextColor = '#c8e6c9'; else if (curr === '#c8e6c9') nextColor = '#ffcdd2'; else nextColor = 'white'; }
                     opt.target.set('fill', nextColor); cvs.requestRenderAll(); saveHistory(id); return; 
                 }
-
                 if(opt.target) { opt.target._startLeft = opt.target.left; opt.target._startTop = opt.target.top; }
             });
             cvs.on('object:moving', function(opt) {
@@ -980,41 +902,24 @@ function drawMeetingTable(cvs) {
             document.getElementById('zoomVal').textContent = Math.round(newZoom * 100) + '%';
         }
 
-        // 共通の配置座標設定
-        const DEFAULT_POS_X = 420; // キャンバス(840)のセンター
-        const DEFAULT_POS_Y = 220; // 指定の上から220px
+        const DEFAULT_POS_X = 420; 
+        const DEFAULT_POS_Y = 220; 
 
         function addToActive(obj, ignorePosition = false) {
             const cvs = getActiveCanvas();
             if (cvs) {
                 if (!ignorePosition) {
-                    obj.set({ 
-                        left: DEFAULT_POS_X, 
-                        top: DEFAULT_POS_Y,
-                        originX: 'center', // 基準点をオブジェクトの中心に
-                        originY: 'center'
-                    });
+                    obj.set({ left: DEFAULT_POS_X, top: DEFAULT_POS_Y, originX: 'center', originY: 'center' });
                 }
-                cvs.add(obj);
-                cvs.setActiveObject(obj);
-                saveHistory(activeCanvasId);
+                cvs.add(obj); cvs.setActiveObject(obj); saveHistory(activeCanvasId);
             }
         }
 
         function addToActiveFixed(obj, lock = true) {
             const cvs = getActiveCanvas();
             if (cvs) {
-                obj.set({ 
-                    left: DEFAULT_POS_X, 
-                    top: DEFAULT_POS_Y, 
-                    originX: 'center',
-                    originY: 'center',
-                    lockScalingX: lock, 
-                    lockScalingY: lock 
-                });
-                cvs.add(obj);
-                cvs.setActiveObject(obj);
-                saveHistory(activeCanvasId);
+                obj.set({ left: DEFAULT_POS_X, top: DEFAULT_POS_Y, originX: 'center', originY: 'center', lockScalingX: lock, lockScalingY: lock });
+                cvs.add(obj); cvs.setActiveObject(obj); saveHistory(activeCanvasId);
             }
         }
 
@@ -1022,33 +927,17 @@ function drawMeetingTable(cvs) {
             const cvs = getActiveCanvas();
             if (cvs) {
                 if (!ignorePosition) {
-                    obj.set({ 
-                        left: DEFAULT_POS_X, 
-                        top: DEFAULT_POS_Y,
-                        originX: 'center',
-                        originY: 'center'
-                    });
+                    obj.set({ left: DEFAULT_POS_X, top: DEFAULT_POS_Y, originX: 'center', originY: 'center' });
                 }
-                cvs.add(obj);
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId);
+                cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId);
             }
         }
 
         function addToActiveFixedNoSelect(obj, lock = true) {
             const cvs = getActiveCanvas();
             if (cvs) {
-                obj.set({ 
-                    left: DEFAULT_POS_X, 
-                    top: DEFAULT_POS_Y,
-                    originX: 'center',
-                    originY: 'center',
-                    lockScalingX: lock, 
-                    lockScalingY: lock 
-                });
-                cvs.add(obj);
-                cvs.requestRenderAll();
-                saveHistory(activeCanvasId);
+                obj.set({ left: DEFAULT_POS_X, top: DEFAULT_POS_Y, originX: 'center', originY: 'center', lockScalingX: lock, lockScalingY: lock });
+                cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId);
             }
         }
 
@@ -1087,44 +976,138 @@ function drawMeetingTable(cvs) {
 
         function toggleLayer(layerId, drawFunc) { const cvs = getActiveCanvas(); if(!cvs) return; const data = getCanvasData(activeCanvasId); data.isBatchDrawing = true; const objects = cvs.getObjects().filter(o => o.layerId === layerId); if (objects.length > 0) { const isVisible = !objects[0].visible; objects.forEach(o => o.set('visible', isVisible)); if(isVisible) objects.forEach(o => cvs.sendToBack(o)); } else { drawFunc(cvs); } data.isBatchDrawing = false; cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         function createWaveLine(x, y, len, color, layerId) { const offsetX = 20; let startX = x + offsetX; let d = `M ${startX} ${y}`; const waveStep = 10; const amp = 5; for (let i = 0; i < len; i += waveStep) { const nextX = startX + i + waveStep; const targetX = (nextX > startX + len) ? startX + len : nextX; const cpX = startX + i + (waveStep / 2); const cpY = ( (i / waveStep) % 2 === 0 ) ? y - amp : y + amp; d += ` Q ${cpX} ${cpY} ${targetX} ${y}`; } return new fabric.Path(d, { stroke: color, strokeWidth: 1, fill: 'transparent', selectable: false, evented: false, isBackground: true, layerId: layerId }); }
-        function addSideCurtains(cvs) { const layerId = 'sideCurtains'; const curtains = [{ y: 340, len: 62 }, { y: 260, len: 85 }, { y: 180, len: 107 }, { y: 110, len: 130 }, { y: 40,  len: 62 }]; curtains.forEach(c => { cvs.add(createWaveLine(0, c.y, c.len, '#999', layerId)); let startRight = 820 - c.len; let dRight = `M ${startRight} ${c.y}`; const waveStep=10; const amp=5; for(let i=0; i<c.len; i+=waveStep) { const nextX = startRight + i + waveStep; const targetX = (nextX > startRight + c.len) ? startRight + c.len : nextX; const cpX = startRight + i + (waveStep/2); const cpY = ((i/waveStep)%2===0) ? c.y-amp : c.y+amp; dRight += ` Q ${cpX} ${cpY} ${targetX} ${c.y}`; } cvs.add(new fabric.Path(dRight, { stroke: '#999', strokeWidth: 1, fill: 'transparent', selectable: false, evented: false, isBackground: true, layerId: layerId })); }); cvs.add(new fabric.Line([60, 30, 780, 30], { stroke: '#333', strokeWidth: 2, selectable: false, evented: false, isBackground: true, layerId: layerId })); cvs.add(new fabric.Text("ホリゾント幕", { left: 420, top: 25, fontSize: 10, fill: '#ccc', fontFamily: DEFAULT_FONT, originX: 'center', originY: 'bottom', selectable: false, evented: false, isBackground: true, layerId: layerId })); cvs.getObjects().filter(o=>o.layerId===layerId).forEach(o=>cvs.sendToBack(o)); }
-        function addDaikokuMaku(cvs) { const layerId = 'daikoku'; let d = `M 0 40`; const waveStep=10; for(let i=0; i<840; i+=waveStep) { const nextX = i+waveStep > 840 ? 840 : i+waveStep; const cpX = i + waveStep/2; const cpY = ((i/waveStep)%2===0) ? 35 : 45; d += ` Q ${cpX} ${cpY} ${nextX} 40`; } const p = new fabric.Path(d, { stroke: '#999', strokeWidth: 1, fill:'transparent', selectable:false, evented:false, isBackground:true, layerId: layerId }); cvs.add(p); cvs.sendToBack(p); }
-        function addDoncho(cvs) { const layerId = 'doncho'; const y = 352; const l = new fabric.Line([5, y, 835, y], { stroke: '#8bc34a', strokeWidth: 5, strokeDashArray: [10, 5], selectable: false, evented: false, isBackground: true, layerId: layerId }); const t = new fabric.Text("緞帳", { left: 420, top: y + 5, fontSize: 12, fill: '#8bc34a', fontFamily: DEFAULT_FONT, originX: 'center', originY: 'top', selectable: false, evented: false, isBackground: true, layerId: layerId }); cvs.add(l); cvs.add(t); cvs.sendToBack(l); cvs.sendToBack(t); }
+        
+        function addSideCurtains(cvs) {
+            const layerId = 'sideCurtains';
+            const curtains = [
+                { y: 334, len: 62 },  
+                { y: 248, len: 85 },  
+                { y: 185, len: 107 }, 
+                { y: 118, len: 130 }, 
+                { y: 37,  len: 62 }   
+            ];
+            curtains.forEach(c => {
+                cvs.add(createWaveLine(0, c.y, c.len, '#999', layerId));
+                let startRight = 820 - c.len; let dRight = `M ${startRight} ${c.y}`; const waveStep=10; const amp=5;
+                for(let i=0; i<c.len; i+=waveStep) {
+                    const nextX = startRight + i + waveStep; const targetX = (nextX > startRight + c.len) ? startRight + c.len : nextX;
+                    const cpX = startRight + i + (waveStep/2); const cpY = ((i/waveStep)%2===0) ? c.y-amp : c.y+amp;
+                    dRight += ` Q ${cpX} ${cpY} ${targetX} ${c.y}`;
+                }
+                cvs.add(new fabric.Path(dRight, { stroke: '#999', strokeWidth: 1, fill: 'transparent', selectable: false, evented: false, isBackground: true, layerId: layerId }));
+            });
+            cvs.add(new fabric.Line([60, 30, 780, 30], { stroke: '#333', strokeWidth: 2, selectable: false, evented: false, isBackground: true, layerId: layerId }));
+            cvs.add(new fabric.Text("ホリゾント幕", { left: 420, top: 25, fontSize: 10, fill: '#ccc', fontFamily: DEFAULT_FONT, originX: 'center', originY: 'bottom', selectable: false, evented: false, isBackground: true, layerId: layerId }));
+            cvs.getObjects().filter(o=>o.layerId===layerId).forEach(o=>cvs.sendToBack(o));
+        }
+
+        function addDaikokuMaku(cvs) {
+            const layerId = 'daikoku';
+            const y = 37;
+            let d = `M 0 ${y}`; const waveStep=10;
+            for(let i=0; i<840; i+=waveStep) {
+                const nextX = i+waveStep > 840 ? 840 : i+waveStep; const cpX = i + waveStep/2; const cpY = ((i/waveStep)%2===0) ? y-5 : y+5; 
+                d += ` Q ${cpX} ${cpY} ${nextX} ${y}`;
+            }
+            const p = new fabric.Path(d, { stroke: '#999', strokeWidth: 1, fill:'transparent', selectable:false, evented:false, isBackground:true, layerId: layerId });
+            cvs.add(p); cvs.sendToBack(p);
+        }
+
+        function addDoncho(cvs) {
+            const layerId = 'doncho';
+            const y = 347;
+            const l = new fabric.Line([5, y, 835, y], { stroke: '#8bc34a', strokeWidth: 5, strokeDashArray: [10, 5], selectable: false, evented: false, isBackground: true, layerId: layerId });
+            const t = new fabric.Text("緞帳", { left: 420, top: y + 5, fontSize: 12, fill: '#8bc34a', fontFamily: DEFAULT_FONT, originX: 'center', originY: 'top', selectable: false, evented: false, isBackground: true, layerId: layerId });
+            cvs.add(l); cvs.add(t); cvs.sendToBack(l); cvs.sendToBack(t);
+        }
+
         function addReflectingBoard(cvs) { const layerId = 'reflect'; const style = { stroke: '#333', strokeWidth: 2, fill: '#e0e0e0', selectable: false, evented: false, isBackground: true, layerId: layerId }; const cPath = new fabric.Path("M 48 0 L 48 2 L 792 2 L 792 0 Z", style); cvs.add(cPath); cvs.sendToBack(cPath); let pathL = "M 61 15 L 48 15 L 48 342 L 61 342 Q 71 301 61 260 Q 71 219.5 61 179 Q 71 138 61 97 Q 71 56 61 15 Z"; const leftGroup = new fabric.Group([new fabric.Path(pathL, style)], { selectable: false, evented: false, isBackground: true, layerId: layerId }); let pathR = "M 779 15 L 792 15 L 792 342 L 779 342 Q 769 301 779 260 Q 769 219.5 779 179 Q 769 138 779 97 Q 769 56 779 15 Z"; const rightGroup = new fabric.Group([new fabric.Path(pathR, style)], { selectable: false, evented: false, isBackground: true, layerId: layerId }); cvs.add(leftGroup); cvs.sendToBack(leftGroup); cvs.add(rightGroup); cvs.sendToBack(rightGroup); }
         function addRetractableSeating(cvs) { const layerId = 'retractable'; const objects = []; const baseRect = new fabric.Rect({ left: 14, top: 907, width: 813, height: 598, fill: 'white', stroke: 'black', strokeWidth: 1 }); objects.push(baseRect); const stairsL = [{x:14, y:890}, {x:242, y:890}, {x:17, y:1488}, {x:242, y:1488}]; stairsL.forEach(p => { let sL = new fabric.Rect({ left: p.x, top: p.y, width: 31, height: 17, fill: 'white', stroke: 'black', strokeWidth: 1 }); objects.push(sL); let sR = new fabric.Rect({ left: 840 - p.x - 31, top: p.y, width: 31, height: 17, fill: 'white', stroke: 'black', strokeWidth: 1 }); objects.push(sR); }); const patternE_Y = [932, 977, 1028, 1076, 1124, 1172, 1220, 1268, 1316, 1364, 1412, 1460]; patternE_Y.forEach(y => { objects.push(createChairRow(8, 50, y, 0)); const w = 8 * 23; objects.push(createChairRow(8, 840 - 50 - w, y, 0)); }); patternE_Y.forEach(y => { objects.push(createChairRow(12, 283, y, 0)); }); const fullGroup = new fabric.Group(objects, { selectable: false, evented: false, isBackground: true, layerId: layerId }); cvs.add(fullGroup); cvs.sendToBack(fullGroup); }
         function createChairRow(count, x, y, angle) { let chairs = []; for(let i=0; i<count; i++) chairs.push(new fabric.Rect({width: 23, height: 28, left: i * 23, top: 0, fill: 'white', stroke: 'black', strokeWidth: 1, rx: 3, ry: 3 })); return new fabric.Group(chairs, { left: x, top: y, angle: angle || 0, originX: 'left', originY: 'top' }); }
         function addFrontAudience() { const cvs = getActiveCanvas(); if(!cvs) return; const data = getCanvasData(activeCanvasId); data.isBatchDrawing = true; const addLockedChair = (count, x, y, angle) => { const grp = createChairRow(count, x, y, angle); grp.set({ lockScalingX: true, lockScalingY: true }); cvs.add(grp); }; const patternA_Y = [526, 577, 625, 676, 729]; patternA_Y.forEach(y => { addLockedChair(7, 82, y, 15); addLockedChair(7, 840 - 82 - (7*23), y + 46, -15); }); const patternB_Y = [579, 673, 767]; patternB_Y.forEach(y => { addLockedChair(12, 284, y, 0); }); const patternC_Y = [627, 721, 876]; patternC_Y.forEach(y => { addLockedChair(11, 295, y, 0); }); const patternD_Y = [876]; patternD_Y.forEach(y => { addLockedChair(7, 75, y, 0); addLockedChair(7, 840 - 75 - (7*23), y, 0); }); data.isBatchDrawing = false; saveHistory(activeCanvasId); }
-        function updateObjStatus() {
-    const cvs = getActiveCanvas();
-    if (!cvs) return;
-    const active = cvs.getActiveObject();
 
-    if (active) {
-        // 既存の処理（線の太さなど）
-        if (active.strokeWidth !== undefined) document.getElementById('strokeWidth').value = active.strokeWidth;
-        if (active.opacity !== undefined) document.getElementById('opacityInput').value = Math.round(active.opacity * 100);
+        function addBattens(cvs) {
+            const layerId = 'battens';
+            const battenData = [ { name: 'UH', y: 102 }, { name: '4バトン', y: 166 }, { name: '3バトン', y: 197 }, { name: '2文字', y: 238 }, { name: '2バトン', y: 261 }, { name: '1バトン', y: 323 } ];
+            battenData.forEach(item => {
+                const line = new fabric.Line([60, item.y, 780, item.y], { stroke: 'black', strokeWidth: 3, opacity: 0.2, selectable: false, evented: false, isBackground: true, layerId: layerId });
+                const text = new fabric.Text(item.name, { left: 780, top: item.y - 2, fontSize: 10, fill: 'black', fontFamily: DEFAULT_FONT, originX: 'right', originY: 'bottom', opacity: 0.5, selectable: false, evented: false, isBackground: true, layerId: layerId });
+                cvs.add(line); cvs.add(text); cvs.sendToBack(line); cvs.sendToBack(text);
+            });
+        }
         
-        const rep = (active.type === 'activeSelection') ? active.getObjects()[0] : active;
-        if (rep.fontSize) {
-            document.getElementById('fontSizeInput').value = rep.fontSize;
+        // --- 修正：照明バトン（太さ混合対応） ---
+        function addLightingBattens(cvs) {
+            const layerId = 'lighting';
+            const battenData = [
+                { name: '２天吊', y: 65, w: 3 }, // 追加：太さ3px
+                { name: '2サス', y: 150, w: 5 },
+                { name: '１天吊', y: 215, w: 3 }, // 追加：太さ3px
+                { name: '1サス', y: 283, w: 5 },
+                { name: 'プロサス', y: 430, w: 5 },
+                { name: 'シーリング', y: 555, w: 5 }
+            ];
+            
+            battenData.forEach(item => {
+                const line = new fabric.Line([60, item.y, 780, item.y], { 
+                    stroke: 'black', 
+                    strokeWidth: item.w, // データごとに太さを指定
+                    opacity: 0.5, 
+                    selectable: false, evented: false, isBackground: true, layerId: layerId 
+                });
+                const text = new fabric.Text(item.name, { 
+                    left: 780, 
+                    top: item.y - 4, 
+                    fontSize: 10, 
+                    fill: 'black', 
+                    fontFamily: DEFAULT_FONT, 
+                    originX: 'right', 
+                    originY: 'bottom', 
+                    opacity: 0.5, 
+                    selectable: false, evented: false, isBackground: true, layerId: layerId 
+                });
+                cvs.add(line); cvs.add(text); cvs.sendToBack(line); cvs.sendToBack(text);
+            });
         }
 
-        // --- 追加・修正部分：サイズと角度の表示 ---
-        // 小数点を丸めて表示
-        const w = Math.round(active.getScaledWidth());
-        const h = Math.round(active.getScaledHeight());
-        const r = Math.round(active.angle % 360); // 360度で割った余りを表示
+        function updateObjStatus() {
+            const cvs = getActiveCanvas(); if (!cvs) return;
+            const active = cvs.getActiveObject();
+            if (active) {
+                if (active.strokeWidth !== undefined) document.getElementById('strokeWidth').value = active.strokeWidth;
+                if (active.opacity !== undefined) document.getElementById('opacityInput').value = Math.round(active.opacity * 100);
+                const rep = (active.type === 'activeSelection') ? active.getObjects()[0] : active;
+                if (rep.fontSize) { document.getElementById('fontSizeInput').value = rep.fontSize; }
+                const w = Math.round(active.getScaledWidth());
+                const h = Math.round(active.getScaledHeight());
+                const r = Math.round(active.angle % 360);
+                document.getElementById('objSize').textContent = `W: ${w} H: ${h}`;
+                document.getElementById('objAngle').textContent = `R: ${r}°`;
+            } else {
+                document.getElementById('objSize').textContent = 'W: - H: -';
+                document.getElementById('objAngle').textContent = 'R: -';
+            }
+        }
 
-        document.getElementById('objSize').textContent = `W: ${w} H: ${h}`;
-        document.getElementById('objAngle').textContent = `R: ${r}°`;
+        function updateLayerButtonStates() { 
+            const cvs = getActiveCanvas(); if(!cvs) return; 
+            ['sideCurtains','daikoku','reflect','doncho','retractable','battens','lighting'].forEach(id => { 
+                const btn = document.getElementById('btn-'+id); 
+                if(btn) { 
+                    const exists = cvs.getObjects().some(o => o.layerId === id && o.visible); 
+                    if(exists) btn.classList.add('active'); else btn.classList.remove('active'); 
+                } 
+            }); 
+            const data = getCanvasData(activeCanvasId); 
+            const btnCenter = document.getElementById('btn-aud-center'); 
+            const btnBack = document.getElementById('btn-aud-back'); 
+            if(data && btnCenter && btnBack) { 
+                btnCenter.classList.remove('active'); btnBack.classList.remove('active'); 
+                if(data.heightState === 1000) btnCenter.classList.add('active'); 
+                else if(data.heightState === 1650) btnBack.classList.add('active'); 
+            } 
+        }
 
-    } else {
-        // 選択されていない時はリセット
-        document.getElementById('objSize').textContent = 'W: - H: -';
-        document.getElementById('objAngle').textContent = 'R: -';
-    }
-}
-        function updateLayerButtonStates() { const cvs = getActiveCanvas(); if(!cvs) return; ['sideCurtains','daikoku','reflect','doncho','retractable'].forEach(id => { const btn = document.getElementById('btn-'+id); if(btn) { const exists = cvs.getObjects().some(o => o.layerId === id && o.visible); if(exists) btn.classList.add('active'); else btn.classList.remove('active'); } }); const data = getCanvasData(activeCanvasId); const btnCenter = document.getElementById('btn-aud-center'); const btnBack = document.getElementById('btn-aud-back'); if(data && btnCenter && btnBack) { btnCenter.classList.remove('active'); btnBack.classList.remove('active'); if(data.heightState === 1000) btnCenter.classList.add('active'); else if(data.heightState === 1650) btnBack.classList.add('active'); } }
         function applyStyle(p,v) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const a=cvs.getActiveObject(); if(a.type==='activeSelection') a.getObjects().forEach(o=>o.set(p,v)); else a.set(p,v); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function applyLineStyle(styleType) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const a=cvs.getActiveObject(); const da = (styleType === 'dashed') ? [5, 5] : null; if(a.type==='activeSelection') a.getObjects().forEach(o=>o.set('strokeDashArray',da)); else a.set('strokeDashArray',da); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function applyOpacity(v) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const o=parseInt(v,10)/100; const a=cvs.getActiveObject(); if(a.type==='activeSelection') a.getObjects().forEach(obj=>obj.set('opacity',o)); else a.set('opacity',o); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
@@ -1134,29 +1117,10 @@ function drawMeetingTable(cvs) {
             if (cvs && _clipboard) {
                 _clipboard.clone(c => {
                     cvs.discardActiveObject();
-                    
-                    // --- 修正箇所：右隣に配置する計算 ---
-                    // 元のオブジェクトの幅を取得（スケールも考慮）
                     const width = c.getScaledWidth();
-                    
-                    c.set({
-                        // 元の左位置 + 幅 = 右隣
-                        left: c.left + width,
-                        top: c.top,
-                        evented: true
-                    });
-
-                    if (c.type === 'activeSelection') {
-                        c.canvas = cvs;
-                        c.forEachObject(o => cvs.add(o));
-                        c.setCoords();
-                    } else {
-                        cvs.add(c);
-                    }
-                    
-                    cvs.setActiveObject(c);
-                    cvs.requestRenderAll();
-                    saveHistory(activeCanvasId);
+                    c.set({ left: c.left + width, top: c.top, evented: true });
+                    if (c.type === 'activeSelection') { c.canvas = cvs; c.forEachObject(o => cvs.add(o)); c.setCoords(); } else { cvs.add(c); }
+                    cvs.setActiveObject(c); cvs.requestRenderAll(); saveHistory(activeCanvasId);
                 });
             }
         }
