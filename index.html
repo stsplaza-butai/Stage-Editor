@@ -394,7 +394,8 @@
         </div>
         <div class="status-item">
             <span class="status-label">📏</span>
-            <span id="objSize">W: - H: -</span>
+            <span id="objSize" style="min-width: 80px;">W: - H: -</span>
+            <span id="objAngle" style="margin-left: 10px; min-width: 40px;">R: -</span>
         </div>
         
         <div class="spacer"></div> 
@@ -799,12 +800,18 @@ function drawMeetingTable(cvs) {
         }
 
         function activateCanvas(id) {
-            activeCanvasId = id; document.querySelectorAll('.canvas-block').forEach(b => b.classList.remove('active'));
+            activeCanvasId = id;
+            document.querySelectorAll('.canvas-block').forEach(b => b.classList.remove('active'));
             const idx = canvasList.findIndex(c => c.id === id);
-            if(idx > -1) {
-                const target = canvasList[idx]; target.blockElement.classList.add('active');
-                document.getElementById('activeCanvasName').textContent = `図面 ${idx + 1}`;
-                const zoomVal = target.canvasObj.getZoom(); document.getElementById('zoomVal').textContent = Math.round(zoomVal * 100) + '%';
+            if (idx > -1) {
+                const target = canvasList[idx];
+                target.blockElement.classList.add('active');
+                
+                // --- 修正箇所：文言変更 ---
+                document.getElementById('activeCanvasName').textContent = `キャンバス ${idx + 1}`;
+                
+                const zoomVal = target.canvasObj.getZoom();
+                document.getElementById('zoomVal').textContent = Math.round(zoomVal * 100) + '%';
                 updateLayerButtonStates();
             }
         }
@@ -973,17 +980,76 @@ function drawMeetingTable(cvs) {
             document.getElementById('zoomVal').textContent = Math.round(newZoom * 100) + '%';
         }
 
+        // 共通の配置座標設定
+        const DEFAULT_POS_X = 420; // キャンバス(840)のセンター
+        const DEFAULT_POS_Y = 220; // 指定の上から220px
+
         function addToActive(obj, ignorePosition = false) {
-            const cvs = getActiveCanvas(); if(cvs) { if(!ignorePosition) { obj.set({ left: 100, top: 100 }); } cvs.add(obj); cvs.setActiveObject(obj); saveHistory(activeCanvasId); }
+            const cvs = getActiveCanvas();
+            if (cvs) {
+                if (!ignorePosition) {
+                    obj.set({ 
+                        left: DEFAULT_POS_X, 
+                        top: DEFAULT_POS_Y,
+                        originX: 'center', // 基準点をオブジェクトの中心に
+                        originY: 'center'
+                    });
+                }
+                cvs.add(obj);
+                cvs.setActiveObject(obj);
+                saveHistory(activeCanvasId);
+            }
         }
-        function addToActiveFixed(obj, lock=true) {
-            const cvs = getActiveCanvas(); if(cvs) { obj.set({ left: 100, top: 100, lockScalingX: lock, lockScalingY: lock }); cvs.add(obj); cvs.setActiveObject(obj); saveHistory(activeCanvasId); }
+
+        function addToActiveFixed(obj, lock = true) {
+            const cvs = getActiveCanvas();
+            if (cvs) {
+                obj.set({ 
+                    left: DEFAULT_POS_X, 
+                    top: DEFAULT_POS_Y, 
+                    originX: 'center',
+                    originY: 'center',
+                    lockScalingX: lock, 
+                    lockScalingY: lock 
+                });
+                cvs.add(obj);
+                cvs.setActiveObject(obj);
+                saveHistory(activeCanvasId);
+            }
         }
+
         function addToActiveNoSelect(obj, ignorePosition = false) {
-            const cvs = getActiveCanvas(); if(cvs) { if(!ignorePosition) { obj.set({ left: 100, top: 100 }); } cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
+            const cvs = getActiveCanvas();
+            if (cvs) {
+                if (!ignorePosition) {
+                    obj.set({ 
+                        left: DEFAULT_POS_X, 
+                        top: DEFAULT_POS_Y,
+                        originX: 'center',
+                        originY: 'center'
+                    });
+                }
+                cvs.add(obj);
+                cvs.requestRenderAll();
+                saveHistory(activeCanvasId);
+            }
         }
-        function addToActiveFixedNoSelect(obj, lock=true) {
-            const cvs = getActiveCanvas(); if(cvs) { obj.set({ left: 100, top: 100, lockScalingX: lock, lockScalingY: lock }); cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
+
+        function addToActiveFixedNoSelect(obj, lock = true) {
+            const cvs = getActiveCanvas();
+            if (cvs) {
+                obj.set({ 
+                    left: DEFAULT_POS_X, 
+                    top: DEFAULT_POS_Y,
+                    originX: 'center',
+                    originY: 'center',
+                    lockScalingX: lock, 
+                    lockScalingY: lock 
+                });
+                cvs.add(obj);
+                cvs.requestRenderAll();
+                saveHistory(activeCanvasId);
+            }
         }
 
         function addLine() { const line = new fabric.Line([0, 0, 100, 0], { stroke: '#000000', strokeWidth: 2, strokeUniform: true }); addToActive(line); }
@@ -1028,13 +1094,72 @@ function drawMeetingTable(cvs) {
         function addRetractableSeating(cvs) { const layerId = 'retractable'; const objects = []; const baseRect = new fabric.Rect({ left: 14, top: 907, width: 813, height: 598, fill: 'white', stroke: 'black', strokeWidth: 1 }); objects.push(baseRect); const stairsL = [{x:14, y:890}, {x:242, y:890}, {x:17, y:1488}, {x:242, y:1488}]; stairsL.forEach(p => { let sL = new fabric.Rect({ left: p.x, top: p.y, width: 31, height: 17, fill: 'white', stroke: 'black', strokeWidth: 1 }); objects.push(sL); let sR = new fabric.Rect({ left: 840 - p.x - 31, top: p.y, width: 31, height: 17, fill: 'white', stroke: 'black', strokeWidth: 1 }); objects.push(sR); }); const patternE_Y = [932, 977, 1028, 1076, 1124, 1172, 1220, 1268, 1316, 1364, 1412, 1460]; patternE_Y.forEach(y => { objects.push(createChairRow(8, 50, y, 0)); const w = 8 * 23; objects.push(createChairRow(8, 840 - 50 - w, y, 0)); }); patternE_Y.forEach(y => { objects.push(createChairRow(12, 283, y, 0)); }); const fullGroup = new fabric.Group(objects, { selectable: false, evented: false, isBackground: true, layerId: layerId }); cvs.add(fullGroup); cvs.sendToBack(fullGroup); }
         function createChairRow(count, x, y, angle) { let chairs = []; for(let i=0; i<count; i++) chairs.push(new fabric.Rect({width: 23, height: 28, left: i * 23, top: 0, fill: 'white', stroke: 'black', strokeWidth: 1, rx: 3, ry: 3 })); return new fabric.Group(chairs, { left: x, top: y, angle: angle || 0, originX: 'left', originY: 'top' }); }
         function addFrontAudience() { const cvs = getActiveCanvas(); if(!cvs) return; const data = getCanvasData(activeCanvasId); data.isBatchDrawing = true; const addLockedChair = (count, x, y, angle) => { const grp = createChairRow(count, x, y, angle); grp.set({ lockScalingX: true, lockScalingY: true }); cvs.add(grp); }; const patternA_Y = [526, 577, 625, 676, 729]; patternA_Y.forEach(y => { addLockedChair(7, 82, y, 15); addLockedChair(7, 840 - 82 - (7*23), y + 46, -15); }); const patternB_Y = [579, 673, 767]; patternB_Y.forEach(y => { addLockedChair(12, 284, y, 0); }); const patternC_Y = [627, 721, 876]; patternC_Y.forEach(y => { addLockedChair(11, 295, y, 0); }); const patternD_Y = [876]; patternD_Y.forEach(y => { addLockedChair(7, 75, y, 0); addLockedChair(7, 840 - 75 - (7*23), y, 0); }); data.isBatchDrawing = false; saveHistory(activeCanvasId); }
-        function updateObjStatus() { const cvs = getActiveCanvas(); if(!cvs) return; const active = cvs.getActiveObject(); if(active) { if(active.strokeWidth!==undefined) document.getElementById('strokeWidth').value=active.strokeWidth; if(active.opacity!==undefined) document.getElementById('opacityInput').value=Math.round(active.opacity*100); const rep = (active.type === 'activeSelection') ? active.getObjects()[0] : active; if (rep.fontSize) { document.getElementById('fontSizeInput').value = rep.fontSize; } } }
+        function updateObjStatus() {
+    const cvs = getActiveCanvas();
+    if (!cvs) return;
+    const active = cvs.getActiveObject();
+
+    if (active) {
+        // 既存の処理（線の太さなど）
+        if (active.strokeWidth !== undefined) document.getElementById('strokeWidth').value = active.strokeWidth;
+        if (active.opacity !== undefined) document.getElementById('opacityInput').value = Math.round(active.opacity * 100);
+        
+        const rep = (active.type === 'activeSelection') ? active.getObjects()[0] : active;
+        if (rep.fontSize) {
+            document.getElementById('fontSizeInput').value = rep.fontSize;
+        }
+
+        // --- 追加・修正部分：サイズと角度の表示 ---
+        // 小数点を丸めて表示
+        const w = Math.round(active.getScaledWidth());
+        const h = Math.round(active.getScaledHeight());
+        const r = Math.round(active.angle % 360); // 360度で割った余りを表示
+
+        document.getElementById('objSize').textContent = `W: ${w} H: ${h}`;
+        document.getElementById('objAngle').textContent = `R: ${r}°`;
+
+    } else {
+        // 選択されていない時はリセット
+        document.getElementById('objSize').textContent = 'W: - H: -';
+        document.getElementById('objAngle').textContent = 'R: -';
+    }
+}
         function updateLayerButtonStates() { const cvs = getActiveCanvas(); if(!cvs) return; ['sideCurtains','daikoku','reflect','doncho','retractable'].forEach(id => { const btn = document.getElementById('btn-'+id); if(btn) { const exists = cvs.getObjects().some(o => o.layerId === id && o.visible); if(exists) btn.classList.add('active'); else btn.classList.remove('active'); } }); const data = getCanvasData(activeCanvasId); const btnCenter = document.getElementById('btn-aud-center'); const btnBack = document.getElementById('btn-aud-back'); if(data && btnCenter && btnBack) { btnCenter.classList.remove('active'); btnBack.classList.remove('active'); if(data.heightState === 1000) btnCenter.classList.add('active'); else if(data.heightState === 1650) btnBack.classList.add('active'); } }
         function applyStyle(p,v) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const a=cvs.getActiveObject(); if(a.type==='activeSelection') a.getObjects().forEach(o=>o.set(p,v)); else a.set(p,v); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function applyLineStyle(styleType) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const a=cvs.getActiveObject(); const da = (styleType === 'dashed') ? [5, 5] : null; if(a.type==='activeSelection') a.getObjects().forEach(o=>o.set('strokeDashArray',da)); else a.set('strokeDashArray',da); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function applyOpacity(v) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const o=parseInt(v,10)/100; const a=cvs.getActiveObject(); if(a.type==='activeSelection') a.getObjects().forEach(obj=>obj.set('opacity',o)); else a.set('opacity',o); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function copyObject(){ const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()) cvs.getActiveObject().clone(c=>_clipboard=c); }
-        function pasteObject(){ const cvs=getActiveCanvas(); if(cvs && _clipboard) { _clipboard.clone(c=>{ cvs.discardActiveObject(); c.set({left:c.left+10, top:c.top+10, evented:true}); if(c.type==='activeSelection') { c.canvas=cvs; c.forEachObject(o=>cvs.add(o)); c.setCoords(); } else cvs.add(c); cvs.setActiveObject(c); cvs.requestRenderAll(); saveHistory(activeCanvasId); }); } }
+        function pasteObject() {
+            const cvs = getActiveCanvas();
+            if (cvs && _clipboard) {
+                _clipboard.clone(c => {
+                    cvs.discardActiveObject();
+                    
+                    // --- 修正箇所：右隣に配置する計算 ---
+                    // 元のオブジェクトの幅を取得（スケールも考慮）
+                    const width = c.getScaledWidth();
+                    
+                    c.set({
+                        // 元の左位置 + 幅 = 右隣
+                        left: c.left + width,
+                        top: c.top,
+                        evented: true
+                    });
+
+                    if (c.type === 'activeSelection') {
+                        c.canvas = cvs;
+                        c.forEachObject(o => cvs.add(o));
+                        c.setCoords();
+                    } else {
+                        cvs.add(c);
+                    }
+                    
+                    cvs.setActiveObject(c);
+                    cvs.requestRenderAll();
+                    saveHistory(activeCanvasId);
+                });
+            }
+        }
         function alignObjects(type) { const cvs = getActiveCanvas(); if (!cvs || !cvs.getActiveObject() || cvs.getActiveObject().type !== 'activeSelection') return; const activeSel = cvs.getActiveObject(); const tl = activeSel.getPointByOrigin('left', 'top'); const br = activeSel.getPointByOrigin('right', 'bottom'); const r = { left: tl.x, top: tl.y, width: br.x - tl.x, height: br.y - tl.y }; const objs = [...activeSel.getObjects()]; cvs.discardActiveObject(); objs.forEach(o => { const c = o.getCenterPoint(); switch(type) { case 'left': o.setPositionByOrigin(new fabric.Point(r.left, c.y), 'left', 'center'); break; case 'center': o.setPositionByOrigin(new fabric.Point(r.left + r.width/2, c.y), 'center', 'center'); break; case 'right': o.setPositionByOrigin(new fabric.Point(r.left + r.width, c.y), 'right', 'center'); break; case 'top': o.setPositionByOrigin(new fabric.Point(c.x, r.top), 'center', 'top'); break; case 'middle': o.setPositionByOrigin(new fabric.Point(c.x, r.top + r.height/2), 'center', 'center'); break; case 'bottom': o.setPositionByOrigin(new fabric.Point(c.x, r.top + r.height), 'center', 'bottom'); break; } o.setCoords(); }); const newSel = new fabric.ActiveSelection(objs, { canvas: cvs }); cvs.setActiveObject(newSel); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         function distributeObjects(axis) { const cvs=getActiveCanvas(); if(!cvs || !cvs.getActiveObject() || cvs.getActiveObject().type!=='activeSelection') return; const objs=cvs.getActiveObject().getObjects(); if(objs.length<3)return; cvs.discardActiveObject(); if(axis==='x') { objs.sort((a,b)=>a.getCenterPoint().x-b.getCenterPoint().x); const step=(objs[objs.length-1].getCenterPoint().x - objs[0].getCenterPoint().x)/(objs.length-1); objs.forEach((o,i)=>{ o.setPositionByOrigin(new fabric.Point(objs[0].getCenterPoint().x+step*i, o.getCenterPoint().y),'center','center'); o.setCoords(); }); } else { objs.sort((a,b)=>a.getCenterPoint().y-b.getCenterPoint().y); const step=(objs[objs.length-1].getCenterPoint().y - objs[0].getCenterPoint().y)/(objs.length-1); objs.forEach((o,i)=>{ o.setPositionByOrigin(new fabric.Point(o.getCenterPoint().x, objs[0].getCenterPoint().y+step*i),'center','center'); o.setCoords(); }); } cvs.setActiveObject(new fabric.ActiveSelection(objs,{canvas:cvs})); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         function bringToFront(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().bringToFront(); saveHistory(activeCanvasId); } }
