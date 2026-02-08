@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>舞台図面エディター Ver2.9</title>
+    <title>舞台図面エディター Ver2.10</title>
     <script src="fabric.min.js"></script>
     <script src="jspdf.umd.min.js"></script>
     
@@ -194,7 +194,7 @@
 <body>
 
     <header>
-        <div class="title">舞台図面エディター Ver2.9</div>
+        <div class="title">舞台図面エディター Ver2.10</div>
         <div class="input-group"><label>📅</label><input type="date" id="eventDate"></div>
         <div class="input-group"><label>🏷️</label><input type="text" id="eventName" placeholder="イベント名"></div>
         <div class="input-group"><label>📍</label><input type="text" id="eventPlace" placeholder="場所"></div>
@@ -1036,14 +1036,15 @@
             });
         }
         
-        // --- 修正：照明バトン（太さ混合対応） ---
+        // --- 修正：照明バトン（1Bor追加） ---
         function addLightingBattens(cvs) {
             const layerId = 'lighting';
             const battenData = [
-                { name: '２天吊', y: 65, w: 3 }, // 追加：太さ3px
+                { name: '２天吊', y: 65, w: 3 },
                 { name: '2サス', y: 150, w: 5 },
-                { name: '１天吊', y: 215, w: 3 }, // 追加：太さ3px
+                { name: '１天吊', y: 215, w: 3 },
                 { name: '1サス', y: 283, w: 5 },
+                { name: '1Bor', y: 305, w: 3 }, // ★追加：1Bor
                 { name: 'プロサス', y: 430, w: 5 },
                 { name: 'シーリング', y: 555, w: 5 }
             ];
@@ -1051,7 +1052,7 @@
             battenData.forEach(item => {
                 const line = new fabric.Line([60, item.y, 780, item.y], { 
                     stroke: 'black', 
-                    strokeWidth: item.w, // データごとに太さを指定
+                    strokeWidth: item.w, 
                     opacity: 0.5, 
                     selectable: false, evented: false, isBackground: true, layerId: layerId 
                 });
@@ -1112,18 +1113,46 @@
         function applyLineStyle(styleType) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const a=cvs.getActiveObject(); const da = (styleType === 'dashed') ? [5, 5] : null; if(a.type==='activeSelection') a.getObjects().forEach(o=>o.set('strokeDashArray',da)); else a.set('strokeDashArray',da); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function applyOpacity(v) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const o=parseInt(v,10)/100; const a=cvs.getActiveObject(); if(a.type==='activeSelection') a.getObjects().forEach(obj=>obj.set('opacity',o)); else a.set('opacity',o); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function copyObject(){ const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()) cvs.getActiveObject().clone(c=>_clipboard=c); }
+        
+        // --- 修正：ペースト挙動 ---
         function pasteObject() {
             const cvs = getActiveCanvas();
             if (cvs && _clipboard) {
                 _clipboard.clone(c => {
                     cvs.discardActiveObject();
+                    
                     const width = c.getScaledWidth();
-                    c.set({ left: c.left + width, top: c.top, evented: true });
-                    if (c.type === 'activeSelection') { c.canvas = cvs; c.forEachObject(o => cvs.add(o)); c.setCoords(); } else { cvs.add(c); }
-                    cvs.setActiveObject(c); cvs.requestRenderAll(); saveHistory(activeCanvasId);
+                    
+                    // ★追加ロジック：幅が400px超えなら右下にずらす、それ以外は右隣
+                    if (width > 400) {
+                        c.set({
+                            left: c.left + 50,
+                            top: c.top + 50,
+                            evented: true
+                        });
+                    } else {
+                        c.set({
+                            left: c.left + width,
+                            top: c.top,
+                            evented: true
+                        });
+                    }
+
+                    if (c.type === 'activeSelection') {
+                        c.canvas = cvs;
+                        c.forEachObject(o => cvs.add(o));
+                        c.setCoords();
+                    } else {
+                        cvs.add(c);
+                    }
+                    
+                    cvs.setActiveObject(c);
+                    cvs.requestRenderAll();
+                    saveHistory(activeCanvasId);
                 });
             }
         }
+        
         function alignObjects(type) { const cvs = getActiveCanvas(); if (!cvs || !cvs.getActiveObject() || cvs.getActiveObject().type !== 'activeSelection') return; const activeSel = cvs.getActiveObject(); const tl = activeSel.getPointByOrigin('left', 'top'); const br = activeSel.getPointByOrigin('right', 'bottom'); const r = { left: tl.x, top: tl.y, width: br.x - tl.x, height: br.y - tl.y }; const objs = [...activeSel.getObjects()]; cvs.discardActiveObject(); objs.forEach(o => { const c = o.getCenterPoint(); switch(type) { case 'left': o.setPositionByOrigin(new fabric.Point(r.left, c.y), 'left', 'center'); break; case 'center': o.setPositionByOrigin(new fabric.Point(r.left + r.width/2, c.y), 'center', 'center'); break; case 'right': o.setPositionByOrigin(new fabric.Point(r.left + r.width, c.y), 'right', 'center'); break; case 'top': o.setPositionByOrigin(new fabric.Point(c.x, r.top), 'center', 'top'); break; case 'middle': o.setPositionByOrigin(new fabric.Point(c.x, r.top + r.height/2), 'center', 'center'); break; case 'bottom': o.setPositionByOrigin(new fabric.Point(c.x, r.top + r.height), 'center', 'bottom'); break; } o.setCoords(); }); const newSel = new fabric.ActiveSelection(objs, { canvas: cvs }); cvs.setActiveObject(newSel); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         function distributeObjects(axis) { const cvs=getActiveCanvas(); if(!cvs || !cvs.getActiveObject() || cvs.getActiveObject().type!=='activeSelection') return; const objs=cvs.getActiveObject().getObjects(); if(objs.length<3)return; cvs.discardActiveObject(); if(axis==='x') { objs.sort((a,b)=>a.getCenterPoint().x-b.getCenterPoint().x); const step=(objs[objs.length-1].getCenterPoint().x - objs[0].getCenterPoint().x)/(objs.length-1); objs.forEach((o,i)=>{ o.setPositionByOrigin(new fabric.Point(objs[0].getCenterPoint().x+step*i, o.getCenterPoint().y),'center','center'); o.setCoords(); }); } else { objs.sort((a,b)=>a.getCenterPoint().y-b.getCenterPoint().y); const step=(objs[objs.length-1].getCenterPoint().y - objs[0].getCenterPoint().y)/(objs.length-1); objs.forEach((o,i)=>{ o.setPositionByOrigin(new fabric.Point(o.getCenterPoint().x, objs[0].getCenterPoint().y+step*i),'center','center'); o.setCoords(); }); } cvs.setActiveObject(new fabric.ActiveSelection(objs,{canvas:cvs})); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         function bringToFront(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().bringToFront(); saveHistory(activeCanvasId); } }
