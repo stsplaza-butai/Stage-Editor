@@ -258,7 +258,7 @@
     <div class="main-container">
         <div class="sidebar">
             <button id="panelToggleBtn" class="panel-toggle-btn active" onclick="toggleSubSidebar()">
-                <span>🪑 備品・画像パネル</span>
+                <span>🪑 備品パネル</span>
                 <span id="panelToggleIcon">▶</span>
             </button>
 
@@ -378,7 +378,7 @@
             <div style="display:flex; gap:10px; width:840px; margin-bottom:20px;">
                 <button class="add-canvas-btn" onclick="addNewCanvasBlock()" style="flex:1; margin-bottom:0;">➕ 図面を追加</button>
                 <button class="add-canvas-btn" onclick="addMeetingCanvasBlock()" style="flex:1; margin-bottom:0; background:#e0f2f1; color:#00695c; border-color:#009688;">📋 打合せ表を追加</button>
-                <button class="add-canvas-btn" onclick="duplicateActiveCanvas()" style="flex:1; margin-bottom:0; background:#fff9c4; color:#ef6c00; border-color:#ff9800;">📑 アクティブな図面を複製</button>
+                <button class="add-canvas-btn" onclick="duplicateActiveCanvas()" style="flex:1; margin-bottom:0; background:#fff9c4; color:#ef6c00; border-color:#ff9800;">📑 選択中のキャンバスを複製</button>
             </div>
         </div>
     </div>
@@ -504,6 +504,7 @@
             }
         }
 
+        // --- キャンバス追加・管理（修正版） ---
         function addNewCanvasBlock(title = '新規図面') {
             const id = 'canvas_' + Date.now();
             const container = document.getElementById('canvasContainer');
@@ -534,20 +535,33 @@
 
             const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
             fCanvas.backgroundColor = "white";
-            fCanvas.setZoom(0.5);
+            
+            // ★修正：初期ズームを 1 (100%) に設定
+            fCanvas.setZoom(1); 
             
             const canvasData = {
-                id: id, canvasObj: fCanvas, history: [], historyStep: -1,
-                isHistoryLocked: false, heightState: 500, blockElement: block
+                id: id,
+                canvasObj: fCanvas,
+                history: [],
+                historyStep: -1,
+                isHistoryLocked: false,
+                heightState: 500,
+                blockElement: block
             };
             canvasList.push(canvasData);
 
             drawDefaultBackground(fCanvas, 500);
             updateHeightButtons(id, 500);
-            fCanvas.setDimensions({ width: BASE_WIDTH * 0.5, height: 500 * 0.5 });
+            
+            // ★修正：初期寸法もズーム1.0で計算
+            fCanvas.setDimensions({ width: BASE_WIDTH, height: 500 });
+            
             setupCanvasEvents(fCanvas, id);
             activateCanvas(id);
             saveHistory(id); 
+            
+            // ズーム表示を更新
+            document.getElementById('zoomVal').textContent = '100%';
         }
 
 function addMeetingCanvasBlock() {
@@ -795,11 +809,46 @@ function drawMeetingTable(cvs) {
         function getActiveCanvas() { if(!activeCanvasId && canvasList.length > 0) activateCanvas(canvasList[0].id); return canvasList.find(c => c.id === activeCanvasId)?.canvasObj; }
         function getCanvasData(id) { return canvasList.find(c => c.id === id); }
 
+        // --- キャンバス高さ制御（修正版） ---
         function setCanvasHeight(id, height, btn) {
-            const data = canvasList.find(c => c.id === id); if(!data) return;
-            data.heightState = height; data.canvasObj.setDimensions({ width: BASE_WIDTH * data.canvasObj.getZoom(), height: height * data.canvasObj.getZoom() });
-            if(data.isMeetingSheet) { data.canvasObj.clear(); data.canvasObj.backgroundColor = "white"; drawMeetingTable(data.canvasObj); } else { drawDefaultBackground(data.canvasObj, height); }
-            updateHeightButtons(id, height); activateCanvas(id); saveHistory(id);
+            const data = canvasList.find(c => c.id === id);
+            if(!data) return;
+        
+            data.heightState = height;
+        
+            // ★追加：図面キャンバスの場合、サイズに合わせてズームを自動変更
+            if (!data.isMeetingSheet) {
+                let newZoom = 1;
+                if (height === 500) newZoom = 1;       // 小: 100%
+                else if (height === 1000) newZoom = 0.8; // 中: 80%
+                else if (height === 1650) newZoom = 0.5; // 大: 50%
+            
+                data.canvasObj.setZoom(newZoom);
+            
+            // 画面右下のズーム表示も更新
+                if (activeCanvasId === id) {
+                document.getElementById('zoomVal').textContent = Math.round(newZoom * 100) + '%';
+                }
+            }
+
+            // 現在のズーム率を取得して寸法を設定
+            const curZoom = data.canvasObj.getZoom();
+            data.canvasObj.setDimensions({ 
+                width: BASE_WIDTH * curZoom, 
+                height: height * curZoom 
+            });
+        
+            if(data.isMeetingSheet) {
+                data.canvasObj.clear();
+                data.canvasObj.backgroundColor = "white";
+                drawMeetingTable(data.canvasObj);
+            } else {
+                drawDefaultBackground(data.canvasObj, height);
+            }
+
+            updateHeightButtons(id, height);
+            activateCanvas(id);
+            saveHistory(id);
         }
 
         function updateHeightButtons(id, height) {
