@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>舞台図面エディター</title>
+    <title>舞台図面エディター Ver2.7</title>
     <script src="fabric.min.js"></script>
     <script src="jspdf.umd.min.js"></script>
     
@@ -698,7 +698,7 @@ function drawMeetingTable(cvs) {
             const vertText = zone.text.split('').join('\n');
             cvs.add(new fabric.Text(vertText, { left: xPos[0] + colWidths[0]/2, top: topY + h/2, fontSize: 12, originX:'center', originY:'center', ...textStyle }));
         }
-        cvs.add(new fabric.Rect({ left: xPos[1], top: topY, width: colWidths[1] + colWidths[2], height: ROW_H, fill: 'white', stroke: '#ccc', strokeWidth: 1, selectable: false, evented: true, hoverCursor: 'pointer', isCell: true, colorType: 'Content' }));
+        cvs.add(new fabric.Rect({ left: xPos[1], top: topY, width: colWidths[1] + colWidths[2], height: ROW_H, fill: 'white', stroke: '#f5f5f5', strokeWidth: 1, selectable: false, evented: true, hoverCursor: 'pointer', isCell: true, colorType: 'Content' }));
         if ((r - 2) % 4 === 0) {
             const hour = 8 + (r - 2) / 4;
             if (hour <= 22) {
@@ -721,11 +721,14 @@ function drawMeetingTable(cvs) {
     cvs.add(new fabric.Line([xPos[1], tableBottomY, xPos[3], tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
     cvs.add(new fabric.Line([0, tableBottomY, TIME_TABLE_W, tableBottomY], { stroke: 'black', strokeWidth: 1, selectable:false, evented:false }));
 
-    // --- 内容列テキスト (★修正：fontSize 14) ---
-    const contentLines = "\n".repeat(57); 
+// --- 内容列テキスト ---
+    const contentLines = "\n".repeat(118); 
     cvs.add(new fabric.Textbox(contentLines, {
         left: 60 + 10, top: HEADER_H, width: 180 - 10, height: 960, 
-        fontSize: 14, // ★修正
+        
+        fontSize: 14, 
+        lineHeight: 0.475, // ★ここを追加（15px ÷ 14px の結果を設定）
+        
         fontFamily: DEFAULT_FONT, fill: '#000',
         splitByGrapheme: true, backgroundColor: 'transparent',
         lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true,
@@ -749,7 +752,7 @@ function drawMeetingTable(cvs) {
         drawCheckboxRow(cvs, TIME_TABLE_W + 50, topY + 15, sec.items);
         
         // ★修正：fontSize 14
-        const techLines = "\n".repeat(8);
+        const techLines = "\n".repeat(9);
         cvs.add(new fabric.Textbox(techLines, {
             left: TIME_TABLE_W + 15, top: topY + 45, width: TECH_COL_W - 30, 
             fontSize: 14, // ★修正
@@ -768,7 +771,7 @@ function drawMeetingTable(cvs) {
     drawCheckboxRow(cvs, 50, REMARKS_Y + 15, ["空調指定", "ホワイエ販売", "２階展示ボード", "後納"]);
     
     // ★修正：fontSize 14
-    const remarkLines = "\n".repeat(7);
+    const remarkLines = "\n".repeat(9);
     cvs.add(new fabric.Textbox(remarkLines, {
         left: 5 + 5, top: REMARKS_Y + 45, width: 840 - 30, 
         fontSize: 14, // ★修正
