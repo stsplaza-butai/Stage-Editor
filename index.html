@@ -990,7 +990,31 @@
             }
         }
 
-        function addLine() { const line = new fabric.Line([0, 0, 100, 0], { stroke: '#000000', strokeWidth: 2, strokeUniform: true }); addToActive(line); }
+        function addLine() { 
+            const line = new fabric.Line([0, 0, 100, 0], { 
+                stroke: 'black', 
+                strokeWidth: 1, 
+                strokeUniform: true, // 拡大しても太さを維持
+                padding: 10,         // 透明な「つかみ代」を周囲10pxに設定
+                lockScalingY: true,  // 縦方向の拡大をロック（真っ白バグ防止）
+                noScaleCache: false, // 描画キャッシュの設定（念のため）
+                transparentCorners: false, // 角の操作点を塗りつぶして見やすく
+                cornerSize: 10,      // 操作点を少し大きく
+                hasBorders: false     // 選択枠を表示（falseにすると線だけになりますが、回転が分かりにくくなるのでtrue推奨）
+            }); 
+            
+            // ▼▼▼ 不要な操作点を消す ▼▼▼
+            // これで「うっかり縦に引き伸ばす」ことが物理的にできなくなります
+            line.setControlVisible('mt', false); // 上の真ん中
+            line.setControlVisible('mb', false); // 下の真ん中
+            line.setControlVisible('tl', false); // 左上
+            line.setControlVisible('tr', false); // 右上
+            line.setControlVisible('bl', false); // 左下
+            line.setControlVisible('br', false); // 右下
+            // 回転と左右だけ残します
+            
+            addToActive(line); 
+        }
         function addArrow() { const p = new fabric.Path('M 0 0 L 80 0 L 70 -5 M 80 0 L 70 5', { stroke: 'black', strokeWidth: 2, fill: 'transparent', strokeUniform: true }); addToActive(p); }
         function addRectShape() { addToActive(new fabric.Rect({ width: 150, height: 65, fill: 'white', stroke: 'black', strokeWidth: 1, strokeUniform: true })); } 
         function addCircleShape() { addToActive(new fabric.Circle({ radius: 22.5, fill: 'white', stroke: 'black', strokeWidth: 1, strokeUniform: true })); } 
