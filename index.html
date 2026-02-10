@@ -337,7 +337,7 @@
 
             <div class="section-header">🎨 塗り</div>
             <div class="quick-colors">
-                <div class="color-chip" style="background:transparent; border:1px dashed #f00;" onclick="applyStyle('fill', 'transparent')" title="透明">🚫</div>
+                <div class="color-chip" style="background:transparent; border:1px dashed #ccc;" onclick="applyStyle('fill', 'transparent')" title="透明">🚫</div>
                 <div class="color-chip" style="background:#ffffff;" onclick="applyStyle('fill', '#ffffff')" title="白"></div>
                 <div class="color-chip" style="background:#000000;" onclick="applyStyle('fill', '#000000')" title="黒"></div>
                 <div class="color-chip" style="background:#404040;" onclick="applyStyle('fill', '#404040')" title="濃灰"></div>
@@ -386,7 +386,7 @@
             </div>
             
             <div class="section-header">🔤 文字</div>
-            <button class="item-btn btn-full" style="margin-bottom:4px;" onclick="addText()"><span>📝</span>文字を追加</button>
+            <button class="item-btn btn-full" style="margin-bottom:4px; background:#f9c6a2;" onclick="addText()"><span style="font-size: 11px;">📝 文字を追加</span></button>
             <div class="style-row">
                 <span>サイズ:</span>
                 <input type="number" id="fontSizeInput" min="1" max="200" value="20" oninput="applyStyle('fontSize', parseInt(this.value))">
@@ -394,18 +394,18 @@
 
             <div class="section-header">📐 記号</div>
             <div class="grid-2">
-                <button class="item-btn" onclick="addLine()"><span>➖</span>線</button>
-                <button class="item-btn" onclick="addArrow()"><span>➡️</span>矢印</button>
-                <button class="item-btn" onclick="addRectShape()"><span>⬜</span>四角</button>
-                <button class="item-btn" onclick="addCircleShape()"><span>⚪</span>丸</button>
-                <button class="item-btn" onclick="addDottedCircle()"><span>⭕</span>点丸</button>
-                <button class="item-btn" onclick="addWaveLine()"><span>〰️</span>波線</button>
+                <button class="item-btn" onclick="addLine()"><span style="font-size: 10px;">── 線</span></button>
+                <button class="item-btn" onclick="addArrow()"><span style="font-size: 10px;">➡️ 矢印</span></button>
+                <button class="item-btn" onclick="addRectShape()"><span style="font-size: 10px;">⬜ 四角</span></button>
+                <button class="item-btn" onclick="addCircleShape()"><span style="font-size: 10px;">◯ 丸</span></button>
+                <button class="item-btn" onclick="addDottedCircle()"><span style="font-size: 10px;">⭕ 点丸</span></button>
+                <button class="item-btn" onclick="addWaveLine()"><span style="font-size: 10px;">〰️ 波線</span></button>
             </div>
         </div>
         
         <div class="sub-sidebar" id="subSidebar">
             <div class="section-header" style="margin-top:0;">🖼️ 画像</div>
-            <button onclick="document.getElementById('objImgInput').click()" class="item-btn btn-full" style="margin-top:5px; background:#fdffe2;"><span style="font-size:11px;">✨ 画像を追加</span></button>
+            <button onclick="document.getElementById('objImgInput').click()" class="item-btn btn-full" style="margin-top:5px; background:#e2feff;"><span style="font-size:11px;">✨ 画像を追加</span></button>
             <input type="file" id="objImgInput" accept="image/*" onchange="addImageObject(this)" style="display:none">
 
             <div class="section-header">🪑 備品</div>
