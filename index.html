@@ -83,7 +83,7 @@
         .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
 
         .sidebar {
-            width: 130px; background: #fff; border-right: 1px solid #ccc;
+            width: 130px; background: #f1f3f5; border-right: 1px solid #ccc;
             padding: 8px; overflow-y: auto; display: flex; flex-direction: column;
             box-shadow: 2px 0 5px rgba(0,0,0,0.05); flex-shrink: 0; z-index: 10;
         }
@@ -107,15 +107,15 @@
         .panel-toggle-btn:hover { background: #cfd8dc; }
         .panel-toggle-btn.active { background: #fff3e0; border-color: #ffb74d; color: #e65100; }
         
-        .section-header { font-size: 10px; font-weight: bold; color: #455a64; margin: 12px 0 4px 0; border-bottom: 1px solid #cfd8dc; padding-bottom: 2px;}
+        .section-header { font-size: 10px; font-weight: bold; color: #455a64; margin: 12px 0 4px 0; border-bottom: 1px solid #cfd8dc; padding-bottom: 1px;}
 
         /* クイックカラーなど */
-        .quick-colors { display: grid; grid-template-columns: repeat(6, 18px); gap: 2px; margin-bottom: 5px; }
+        .quick-colors { display: grid; grid-template-columns: repeat(12, 10px); gap: 1px; margin-bottom: 0px; }
         .color-chip {
-            width: 18px; height: 18px; border: 1px solid #e0e0e0; border-radius: 2px; cursor: pointer;
+            width: 9px; height: 9px; border: 0px solid #e0e0e0; border-radius: 0px; cursor: pointer;
             font-size: 8px; display: flex; align-items: center; justify-content: center;
         }
-        .color-chip:hover { transform: scale(1.3); border-color: #666; z-index: 100; box-shadow: 0 0 4px rgba(0,0,0,0.3);}
+        .color-chip:hover { transform: scale(3); border-color: #666; z-index: 100; box-shadow: 0 0 4px rgba(0,0,0,0.3);}
         
         .style-row { display: flex; align-items: center; justify-content: space-between; font-size: 10px; margin-bottom: 3px;}
         input[type="number"] { width: 35px; padding: 2px; font-size: 10px; }
@@ -343,28 +343,41 @@
                 <div class="color-chip" style="background:#404040;" onclick="applyStyle('fill', '#404040')" title="濃灰"></div>
                 <div class="color-chip" style="background:#868686;" onclick="applyStyle('fill', '#868686')" title="灰"></div>
                 <div class="color-chip" style="background:#bdbdbd;" onclick="applyStyle('fill', '#bdbdbd')" title="薄灰"></div>
+                <div class="color-chip" style="background:#fa3e3b;" onclick="applyStyle('fill', '#fa3e3b')" title="濃赤"></div>
+                <div class="color-chip" style="background:#ff8692;" onclick="applyStyle('fill', '#ff8692')" title="赤"></div>
+                <div class="color-chip" style="background:#ffe2e5;" onclick="applyStyle('fill', '#ffe2e5')" title="薄赤"></div>
+                <div class="color-chip" style="background:#e59035;" onclick="applyStyle('fill', '#e59035')" title="濃橙"></div>
+                <div class="color-chip" style="background:#f5c09c;" onclick="applyStyle('fill', '#f5c09c')" title="橙"></div>
+                <div class="color-chip" style="background:#fff2e0;" onclick="applyStyle('fill', '#fff2e0')" title="薄橙"></div>
+                <div class="color-chip" style="background:#fff04e;" onclick="applyStyle('fill', '#fff04e')" title="濃黄"></div>
+                <div class="color-chip" style="background:#fff599;" onclick="applyStyle('fill', '#fff599')" title="黄"></div>
+                <div class="color-chip" style="background:#fffdda;" onclick="applyStyle('fill', '#fffdda')" title="薄黄"></div>
                 <div class="color-chip" style="background:#43a047;" onclick="applyStyle('fill', '#43a047')" title="濃緑"></div>
                 <div class="color-chip" style="background:#90d292;" onclick="applyStyle('fill', '#90d292')" title="緑"></div>
                 <div class="color-chip" style="background:#c8e6c9;" onclick="applyStyle('fill', '#c8e6c9')" title="薄緑"></div>
-                <div class="color-chip" style="background:#e53935;" onclick="applyStyle('fill', '#e53935')" title="濃赤"></div>
-                <div class="color-chip" style="background:#f36c79;" onclick="applyStyle('fill', '#f36c79')" title="赤"></div>
-                <div class="color-chip" style="background:#ffcdd2;" onclick="applyStyle('fill', '#ffcdd2')" title="薄赤"></div>
-                <div class="color-chip" style="background:#e9c350;" onclick="applyStyle('fill', '#e9c350')" title="濃黄"></div>
-                <div class="color-chip" style="background:#f5dc93;" onclick="applyStyle('fill', '#f5dc93')" title="黄"></div>
-                <div class="color-chip" style="background:#f8eccb;" onclick="applyStyle('fill', '#f8eccb')" title="薄黄"></div>
                 <div class="color-chip" style="background:#1e88e5;" onclick="applyStyle('fill', '#1e88e5')" title="濃青"></div>
                 <div class="color-chip" style="background:#72b7f4;" onclick="applyStyle('fill', '#72b7f4')" title="青"></div>
                 <div class="color-chip" style="background:#c3dff8;" onclick="applyStyle('fill', '#c3dff8')" title="薄青"></div>
+                <div class="color-chip" style="background:#741ee5;" onclick="applyStyle('fill', '#741ee5')" title="濃紫"></div>
+                <div class="color-chip" style="background:#b172f4;" onclick="applyStyle('fill', '#b172f4')" title="紫"></div>
+                <div class="color-chip" style="background:#d9c3f8;" onclick="applyStyle('fill', '#d9c3f8')" title="薄紫"></div>
+                
             </div>
 
             <div class="section-header">✏️ 線</div>
              <div class="quick-colors">
                 <div class="color-chip" style="background:transparent; border:1px dashed #ccc;" onclick="applyStyle('stroke', 'transparent')" title="なし">🚫</div>
                 <div class="color-chip" style="background:#ffffff;" onclick="applyStyle('stroke', '#ffffff')" title="白"></div>
-                <div class="color-chip" style="background:#bdbdbd;" onclick="applyStyle('stroke', '#bdbdbd')" title="灰"></div>
                 <div class="color-chip" style="background:#000000;" onclick="applyStyle('stroke', '#000000')" title="黒"></div>
-                <div class="color-chip" style="background:#e53935;" onclick="applyStyle('stroke', '#e53935')" title="赤"></div>
+                <div class="color-chip" style="background:#404040;" onclick="applyStyle('stroke', '#404040')" title="濃灰"></div>
+                <div class="color-chip" style="background:#868686;" onclick="applyStyle('stroke', '#868686')" title="灰"></div>
+                <div class="color-chip" style="background:#bdbdbd;" onclick="applyStyle('stroke', '#bdbdbd')" title="薄灰"></div>
+                <div class="color-chip" style="background:#fa3e3b;" onclick="applyStyle('stroke', '#fa3e3b')" title="赤"></div>
+                <div class="color-chip" style="background:#e59035;" onclick="applyStyle('stroke', '#e59035')" title="濃橙"></div>
+                <div class="color-chip" style="background:#fff04e;" onclick="applyStyle('stroke', '#fff04e')" title="濃黄"></div>
+                <div class="color-chip" style="background:#43a047;" onclick="applyStyle('stroke', '#43a047')" title="濃緑"></div>
                 <div class="color-chip" style="background:#1e88e5;" onclick="applyStyle('stroke', '#1e88e5')" title="青"></div>
+                <div class="color-chip" style="background:#741ee5;" onclick="applyStyle('stroke', '#741ee5')" title="濃紫"></div>
             </div>
             
             <div class="style-row" style="margin-top:5px;">
@@ -469,6 +482,7 @@
         <div class="status-item">
             <span class="status-label">📏</span>
             <span id="objSize" style="min-width: 80px;">W: - H: -</span>
+            <span id="objSizeMM" style="margin-left: 10px; color:#ffcc80; min-width: 100px;">W: -mm H: -mm</span>
             <span id="objAngle" style="margin-left: 10px; min-width: 40px;">R: -</span>
         </div>
         
@@ -506,11 +520,14 @@
 
             <h3>🖱️ 操作のヒント</h3>
             <ul>
-                <li><strong>保存・読込:</strong> JSONファイルでのプロジェクト保存。</li>
-                <li><strong>自動保存:</strong> 30秒毎にローカル自動保存（上書き）。操作がない場合は休止。</li>
-                <li><strong>再開:</strong> 自動保存の読込。うっかりブラウザ閉じた時などに。起動後30秒以内に！</li>
-                <li><strong>書出し:</strong> 各キャンバスをJPGは縦に連結、PDFは１ページづつ。☑️ 印刷 チェックを外すと書出しから除外されます。</li>
-                <li><strong>打刻:</strong> 日付・イベント名・場所をキャンバスに配置。ファイル名にも反映。</li>            
+                <li><strong>保存・読込：</strong> JSONファイルでのプロジェクト保存。</li>
+                <li><strong>自動保存：</strong> 30秒毎にローカル自動保存（上書き）。操作がない場合は休止。</li>
+                <li><strong>再開：</strong> 自動保存の読込。うっかりブラウザ閉じた時などに。起動後30秒以内！</li>
+                <li><strong>書出し：</strong> JPG：各キャンバスを縦に連結し一枚の画像で書出ます。</li>
+                <li><strong>　　　　</strong> PDF：１キャンバス１ページで書き出します。</li>
+                <li><strong>印刷：</strong> キャンバスの ☑️ 印刷 チェックを外すと書出しから除外されます。</li>
+                <li><strong>日付・イベント名・場所：</strong> 入力してあるとファイル名に反映されます。</li>
+                <li><strong>打刻：</strong> 日付・イベント名・場所をキャンバスに配置。</li>            
             </ul>
         </div>
     </div>
@@ -1024,14 +1041,15 @@
                 staticC.add(new fabric.Rect({ left: 599, top: 1505, width: 42, height: 24, ...paStyle }));
                 staticC.add(new fabric.Rect({ left: 409, top: 1505, width: 23, height: 21, ...paStyle }));
             }
-            // ▼▼▼ 変更点: CLを別々に描画して重ねる ▼▼▼
+            // ▼▼▼ センターラインマーク「C」「L」を別々に描画して重ねる ▼▼▼
             // 「C」の設定
             const textC = new fabric.Text("C", { 
-                left: 420,       // 左右位置（420が真ん中）
+                left: 421,       // 左右位置（420が真ん中）
                 top: endY + 5,   // 上下位置
                 fontSize: 14, 
                 fill: '#333', 
                 fontFamily: DEFAULT_FONT, 
+                fontStyle: 'italic',
                 originX: 'center', originY: 'top' 
             });
 
@@ -1042,6 +1060,7 @@
                 fontSize: 14, 
                 fill: '#333', 
                 fontFamily: DEFAULT_FONT, 
+                fontStyle: 'italic',
                 originX: 'center', originY: 'top' 
             });
 
@@ -1425,13 +1444,23 @@
                 if (active.opacity !== undefined) document.getElementById('opacityInput').value = Math.round(active.opacity * 100);
                 const rep = (active.type === 'activeSelection') ? active.getObjects()[0] : active;
                 if (rep.fontSize) { document.getElementById('fontSizeInput').value = rep.fontSize; }
+                
                 const w = Math.round(active.getScaledWidth());
                 const h = Math.round(active.getScaledHeight());
                 const r = Math.round(active.angle % 360);
+                
                 document.getElementById('objSize').textContent = `W: ${w} H: ${h}`;
+                
+                // ▼▼▼ 追加: mm計算 (1px = 20mm) ▼▼▼
+                const w_mm = w * 20;
+                const h_mm = h * 20;
+                document.getElementById('objSizeMM').textContent = `W: ${w_mm}mm H: ${h_mm}mm`;
+                // ▲▲▲ 追加ここまで ▲▲▲
+
                 document.getElementById('objAngle').textContent = `R: ${r}°`;
             } else {
                 document.getElementById('objSize').textContent = 'W: - H: -';
+                document.getElementById('objSizeMM').textContent = 'W: -mm H: -mm'; // ▼ここも追加
                 document.getElementById('objAngle').textContent = 'R: -';
             }
         }
