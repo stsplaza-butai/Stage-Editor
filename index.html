@@ -146,6 +146,7 @@
         .canvas-area {
             flex: 1; background-color: #b0bec5; overflow: auto; padding: 20px;
             display: flex; flex-direction: column; align-items: center; gap: 30px;
+            transition: background-color 1s ease;
         }
 
         /* ▼▼▼ 通常時（選んでいない時）の設定 ▼▼▼ */
@@ -229,7 +230,7 @@
             position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #90a4ae;
         }
         .close-btn:hover { color: #c62828; }
-        .help-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .help-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
         .help-table td { border-bottom: 1px solid #eceff1; padding: 6px 4px; }
         .help-table tr:last-child td { border-bottom: none; }
         .help-table td:first-child { font-family: monospace; font-weight: bold; color: #0277bd; width: 140px;}
@@ -237,12 +238,26 @@
         h3 { margin: 15px 0 5px 0; font-size: 14px; color: #455a64; border-left: 4px solid #b0bec5; padding-left: 8px;}
         ul { padding-left: 20px; margin: 5px 0; }
         li { margin-bottom: 4px; }
+        /* --- レイヤーモード用のスタイル --- */
+        /* キャンバスエリアの背景を濃くする */
+        .canvas-area.layer-mode {
+            background-color: #483a32 !important; /* 通常の #b0bec5 よりかなり暗く */
+        }
+        
+        /* レイヤーボタンがONの時の見た目 */
+        #btn-layer-mode.active {
+            background-color: #ff9800 !important; /* オレンジ色で強調 */
+            border-color: #e65100 !important;
+            color: white !important;
+            font-weight: bold;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="title">🎨 舞台図面エディター Ver2.99</div>
+        <div class="title">🎨 舞台図面エディター Ver3.0</div>
         <div class="input-group"><label>📅</label><input type="date" id="eventDate"></div>
         <div class="input-group"><label>🏷️</label><input type="text" id="eventName" placeholder="イベント名"></div>
         <div class="input-group"><label>📍</label><input type="text" id="eventPlace" placeholder="場所"></div>
@@ -306,8 +321,12 @@
         
         <div class="toolbar-group">
             <span class="group-label">特殊</span>
-            <button onclick="mirrorPaste()" title="左右対称の位置に反転コピー">🪞 反転ペースト</button>
+            <button onclick="mirrorPaste()" style="background:hsl(266, 100%, 93%);" title="左右対称の位置に反転コピー">🪞反転ペースト</button>
+
+            <button id="btn-layer-mode" onclick="toggleLayerMode()" style="background:#ffeabd;" title="レイヤー編集モードに切り替え">🪟レイヤーモード</button>
+            <button id="btn-layer-vis" onclick="toggleLayerVisibility()" class="active" style="background:#fffaee;" title="レイヤーの表示/非表示">👁️ ON</button>
         </div>
+
     </div>
 
     <div class="main-container">
@@ -418,7 +437,7 @@
         
         <div class="sub-sidebar" id="subSidebar">
             <div class="section-header" style="margin-top:0;">🖼️ 画像</div>
-            <button onclick="document.getElementById('objImgInput').click()" class="item-btn btn-full" style="margin-top:5px; background:#e2feff;"><span style="font-size:11px;">✨ 画像を追加</span></button>
+            <button onclick="document.getElementById('objImgInput').click()" class="item-btn btn-full" style="margin-top:5px; background:#e2feff;"><span style="font-size:11px;">✨ 画像を配置</span></button>
             <input type="file" id="objImgInput" accept="image/*" onchange="addImageObject(this)" style="display:none">
 
             <div class="section-header">🪑 備品</div>
@@ -500,8 +519,21 @@
     <div id="helpModal" class="modal-overlay" onclick="if(event.target === this) toggleHelpModal()" style="display:none;">
         <div class="modal-content">
             <span class="close-btn" onclick="toggleHelpModal()">×</span>
-            <h2>🛠️ ショートカット ＆ ヒント</h2>
+            <h2>🛠️ ヒント ＆ ショートカット</h2>
             
+            <h3>🖱️ 操作のヒント</h3>
+            <ul>
+                <li><strong>保存・読込：</strong> JSONファイルでのプロジェクト保存。</li>
+                <li><strong>自動保存：</strong> 30秒毎にローカル自動保存（上書き）。操作がない場合は休止。</li>
+                <li><strong>再開：</strong> 自動保存の読込。うっかりブラウザ閉じた時などに。起動後30秒以内！</li>
+                <li><strong>書出し：</strong> JPG：各キャンバスを縦に連結し一枚の画像で書出します。
+                <br>　　　　PDF：１キャンバス１ページで書出します。
+                <br>　　　　キャンバスの ☑️ 書出 チェックを外すと書出しから除外されます。</li>
+                <li><strong>日付・イベント名・場所：</strong> 入力してあるとファイル名に反映されます。</li>
+                <li><strong>打刻：</strong> 日付・イベント名・場所をキャンバスに配置。</li>
+                <li><strong>レイヤーモード：</strong> レイヤー編集モードに切り替え。レイヤーは手前に１枚のみ。</li>            
+            </ul>
+
             <h3>⌨️ ショートカットキー</h3>
             <table class="help-table">
                 <tr><td>Ctrl + C</td><td>コピー</td></tr>
@@ -511,24 +543,12 @@
                 <tr><td>Ctrl + G</td><td>グループ化</td></tr>
                 <tr><td>Ctrl + Shift + G</td><td>グループ解除</td></tr>
                 <tr><td>Delete / BS</td><td>削除</td></tr>
-                <tr><td>矢印キー</td><td>1px 移動</td></tr>
-                <tr><td>Shift + 矢印</td><td>10px 移動</td></tr>
-                <tr><td>Shift + ドラッグ</td><td>水平・垂直移動</td></tr>
-                <tr><td>Shift + 回転操作</td><td>フリー回転</td></tr>
+                <tr><td>矢印キー</td><td>1px 移動（+ Shift：10px 移動）</td></tr>
+                <tr><td>Shift + 移動</td><td>水平・垂直に固定</td></tr>
+                <tr><td>Shift + 回転</td><td>フリー回転（普段は15度刻み）</td></tr>
                 <tr><td>Ctrl + ホイール</td><td>ズームイン・アウト</td></tr>
             </table>
-
-            <h3>🖱️ 操作のヒント</h3>
-            <ul>
-                <li><strong>保存・読込：</strong> JSONファイルでのプロジェクト保存。</li>
-                <li><strong>自動保存：</strong> 30秒毎にローカル自動保存（上書き）。操作がない場合は休止。</li>
-                <li><strong>再開：</strong> 自動保存の読込。うっかりブラウザ閉じた時などに。起動後30秒以内！</li>
-                <li><strong>書出し：</strong> JPG：各キャンバスを縦に連結し一枚の画像で書出ます。</li>
-                <li><strong>　　　　</strong> PDF：１キャンバス１ページで書き出します。</li>
-                <li><strong>印刷：</strong> キャンバスの ☑️ 印刷 チェックを外すと書出しから除外されます。</li>
-                <li><strong>日付・イベント名・場所：</strong> 入力してあるとファイル名に反映されます。</li>
-                <li><strong>打刻：</strong> 日付・イベント名・場所をキャンバスに配置。</li>            
-            </ul>
+            
         </div>
     </div>
 
@@ -541,7 +561,8 @@
             'lockScalingX', 'lockScalingY', 'layerId', 'strokeUniform',
             'lockMovementX', 'lockMovementY', 'hasControls', 'hoverCursor', 
             'isCell', 'colorType', 'cellState', 
-            'isPermanent', 'isCheckboxBox', 'isCheckMark', 'checkboxId'
+            'isPermanent', 'isCheckboxBox', 'isCheckMark', 'checkboxId',
+            'isLayerObject'
         ];
         const BASE_WIDTH = 840;
         const LS_KEY = 'stage_editor_autosave_v2';
@@ -648,7 +669,7 @@
                         <button class="btn-mini btn-size" onclick="setCanvasHeight('${id}', 1650, this)">＋客席後方</button>
                     </div>
                     <label style="font-size:11px; margin-left:10px; cursor:pointer;">
-                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 印刷
+                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 書出
                     </label>
                     <button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}')">🗑️ 削除</button>
                 </div>
@@ -703,7 +724,7 @@
                     </div>
                     
                     <label style="font-size:11px; margin-left:15px; cursor:pointer;">
-                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 印刷
+                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 書出
                     </label>
 
                     <span style="font-size:11px; margin-left:15px; color:#555;">
@@ -979,17 +1000,40 @@
         }
 
         function undo() {
-            const id = activeCanvasId; const data = getCanvasData(id);
+            const id = activeCanvasId; 
+            const data = getCanvasData(id);
             if (data && data.historyStep > 0) {
-                data.isHistoryLocked = true; data.historyStep--;
-                data.canvasObj.loadFromJSON(data.history[data.historyStep], function() { restoreBackgroundState(data.canvasObj); data.isHistoryLocked = false; updateObjStatus(); markUnsaved(); });
+                data.isHistoryLocked = true; 
+                data.historyStep--;
+                data.canvasObj.loadFromJSON(data.history[data.historyStep], function() { 
+                    restoreBackgroundState(data.canvasObj); 
+                    
+                    // ★追加：戻った後に、今のモードに合わせてロックを掛け直す！
+                    updateObjectSelectability(data.canvasObj);
+
+                    data.isHistoryLocked = false; 
+                    updateObjStatus(); 
+                    markUnsaved(); 
+                });
             }
         }
+
         function redo() {
-            const id = activeCanvasId; const data = getCanvasData(id);
+            const id = activeCanvasId; 
+            const data = getCanvasData(id);
             if (data && data.historyStep < data.history.length - 1) {
-                data.isHistoryLocked = true; data.historyStep++;
-                data.canvasObj.loadFromJSON(data.history[data.historyStep], function() { restoreBackgroundState(data.canvasObj); data.isHistoryLocked = false; updateObjStatus(); markUnsaved(); });
+                data.isHistoryLocked = true; 
+                data.historyStep++;
+                data.canvasObj.loadFromJSON(data.history[data.historyStep], function() { 
+                    restoreBackgroundState(data.canvasObj); 
+                    
+                    // ★追加：やり直した後も、同様にロックを掛け直す！
+                    updateObjectSelectability(data.canvasObj);
+
+                    data.isHistoryLocked = false; 
+                    updateObjStatus(); 
+                    markUnsaved(); 
+                });
             }
         }
 
@@ -1086,39 +1130,71 @@
         const DEFAULT_POS_X = 420; 
         const DEFAULT_POS_Y = 220; 
 
+        // ▼▼▼ 共通処理：オブジェクト追加時にレイヤー属性を付与する ▼▼▼
+        function applyLayerAttribute(obj) {
+            if (isLayerMode) {
+                obj.set('isLayerObject', true);
+                // 念のため、グループの中身にもフラグを立てておく（グループ解除対策）
+                if (obj.type === 'group' || obj.type === 'activeSelection') {
+                    obj.getObjects().forEach(o => o.set('isLayerObject', true));
+                }
+            } else {
+                obj.set('isLayerObject', false);
+                if (obj.type === 'group' || obj.type === 'activeSelection') {
+                    obj.getObjects().forEach(o => o.set('isLayerObject', false));
+                }
+            }
+        }
+
         function addToActive(obj, ignorePosition = false) {
             const cvs = getActiveCanvas();
             if (cvs) {
+                applyLayerAttribute(obj);
+
                 if (!ignorePosition) {
                     obj.set({ left: DEFAULT_POS_X, top: DEFAULT_POS_Y, originX: 'center', originY: 'center' });
                 }
-                cvs.add(obj); cvs.setActiveObject(obj); saveHistory(activeCanvasId);
+                cvs.add(obj); 
+                cvs.setActiveObject(obj); 
+                saveHistory(activeCanvasId);
             }
         }
 
         function addToActiveFixed(obj, lock = true) {
             const cvs = getActiveCanvas();
             if (cvs) {
+                applyLayerAttribute(obj);
+
                 obj.set({ left: DEFAULT_POS_X, top: DEFAULT_POS_Y, originX: 'center', originY: 'center', lockScalingX: lock, lockScalingY: lock });
-                cvs.add(obj); cvs.setActiveObject(obj); saveHistory(activeCanvasId);
+                cvs.add(obj); 
+                cvs.setActiveObject(obj); 
+                saveHistory(activeCanvasId);
             }
         }
 
         function addToActiveNoSelect(obj, ignorePosition = false) {
             const cvs = getActiveCanvas();
             if (cvs) {
+                applyLayerAttribute(obj);
+
                 if (!ignorePosition) {
                     obj.set({ left: DEFAULT_POS_X, top: DEFAULT_POS_Y, originX: 'center', originY: 'center' });
                 }
-                cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId);
+                cvs.add(obj); 
+                cvs.requestRenderAll(); 
+                saveHistory(activeCanvasId);
             }
         }
 
         function addToActiveFixedNoSelect(obj, lock = true) {
             const cvs = getActiveCanvas();
             if (cvs) {
+                applyLayerAttribute(obj);
+
                 obj.set({ left: DEFAULT_POS_X, top: DEFAULT_POS_Y, originX: 'center', originY: 'center', lockScalingX: lock, lockScalingY: lock });
-                cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId);
+                cvs.add(obj); 
+                cvs.requestRenderAll(); 
+                saveHistory(activeCanvasId);
             }
         }
 
@@ -1154,28 +1230,136 @@
         function addWaveLine() { let d = `M 0 0`; const waveStep = 10; const amp = 5; for (let i = 0; i < 200; i += waveStep) { const nextX = i + waveStep; const cpX = i + (waveStep / 2); const cpY = ( (i / waveStep) % 2 === 0 ) ? -amp : amp; d += ` Q ${cpX} ${cpY} ${nextX} 0`; } addToActive(new fabric.Path(d, { stroke: 'black', strokeWidth: 1, fill: 'transparent', strokeUniform: true })); }
         function addText() { addToActive(new fabric.IText('テキスト', { fontSize: 20, fill: '#333', fontFamily: DEFAULT_FONT })); }
         
-        function addPiano() { const body = new fabric.Path("M 0 0 L 0 80 L 32 80 Q 51.28 78.55 66 66 Q 80.6 54.81 99 55 L 121 53 Q 138.32 45.05 139 26 Q 140.16 8.0 124 0 L 0 0 Z", { fill: 'black' }); const keyboard = new fabric.Rect({ left: 3, top: 7, width: 8, height: 66, fill: 'white' }); const group = new fabric.Group([body, keyboard], { left: 396, top: 213, lockScalingX: true, lockScalingY: true }); const cvs = getActiveCanvas(); if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
-        function addSignboard() { const rect = new fabric.Rect({ width: 350, height: 15, fill: 'white', stroke: 'black', strokeWidth: 1, originX: 'center', originY: 'center' }); const text = new fabric.Text("プ ラ ザ 枠", { fontSize: 10, fill: '#bdbdbd', originX: 'center', originY: 'center', top: -1, fontFamily: DEFAULT_FONT }); const group = new fabric.Group([rect, text], { left: 420, top: 160, originX: 'center', originY: 'top', lockScalingX: true, lockScalingY: true }); const cvs = getActiveCanvas(); if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
-        function addHangingBanner() { const cvs = getActiveCanvas(); if(!cvs) return; const positions = [140, 190, 840 - 190 - 45, 840 - 140 - 45]; const data = getCanvasData(activeCanvasId); data.isBatchDrawing = true; positions.forEach(x => { cvs.add(new fabric.Rect({ left: x, top: 100, width: 45, height: 25, fill: 'white', stroke: 'black', strokeWidth: 1 })); }); data.isBatchDrawing = false; saveHistory(activeCanvasId); }
+        function addPiano() { 
+            const body = new fabric.Path("M 0 0 L 0 80 L 32 80 Q 51.28 78.55 66 66 Q 80.6 54.81 99 55 L 121 53 Q 138.32 45.05 139 26 Q 140.16 8.0 124 0 L 0 0 Z", { fill: 'black' }); 
+            const keyboard = new fabric.Rect({ left: 3, top: 7, width: 8, height: 66, fill: 'white' }); 
+            const group = new fabric.Group([body, keyboard], { left: 396, top: 213, lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加
+            applyLayerAttribute(group);
+
+            const cvs = getActiveCanvas(); 
+            if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); } 
+        }
+
+        function addSignboard() { 
+            const rect = new fabric.Rect({ width: 350, height: 15, fill: 'white', stroke: 'black', strokeWidth: 1, originX: 'center', originY: 'center' }); 
+            const text = new fabric.Text("プ ラ ザ 枠", { fontSize: 10, fill: '#bdbdbd', originX: 'center', originY: 'center', top: -1, fontFamily: DEFAULT_FONT }); 
+            const group = new fabric.Group([rect, text], { left: 420, top: 160, originX: 'center', originY: 'top', lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加
+            applyLayerAttribute(group);
+
+            const cvs = getActiveCanvas(); 
+            if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); } 
+        }
+
+        function addHangingBanner() { 
+            const cvs = getActiveCanvas(); 
+            if(!cvs) return; 
+            const positions = [140, 190, 840 - 190 - 45, 840 - 140 - 45]; 
+            const data = getCanvasData(activeCanvasId); 
+            data.isBatchDrawing = true; 
+            positions.forEach(x => { 
+                const rect = new fabric.Rect({ left: x, top: 100, width: 45, height: 25, fill: 'white', stroke: 'black', strokeWidth: 1 });
+                
+                // ★追加（ループの中で個別に適用）
+                applyLayerAttribute(rect);
+
+                cvs.add(rect); 
+            }); 
+            data.isBatchDrawing = false; 
+            saveHistory(activeCanvasId); 
+        }
         function createMicGroup(extras=[]) { const stem = new fabric.Line([9, 30, 9, 0], { stroke: 'black', strokeWidth: 1 }); const tri = new fabric.Triangle({ width: 8, height: 8, fill: 'black', left: 5, top: -4, angle: 0 }); const circle = new fabric.Circle({ radius: 6, fill: '', stroke: 'black', strokeWidth: 1, left: 3, top: 10 }); return new fabric.Group([stem, tri, circle, ...extras]); }
         function addMic() { addToActiveFixedNoSelect(createMicGroup()); }
         function addStandMic() { addToActiveFixedNoSelect(createMicGroup([new fabric.Line([0, 35, 18, 35],{stroke:'black',strokeWidth:1}), new fabric.Line([9,30,9,35],{stroke:'black',strokeWidth:1})])); }
         function addWLMic() { addToActiveFixedNoSelect(createMicGroup([new fabric.Text("WL",{fontSize:10,left:15,top:15,fill:'black',fontFamily:DEFAULT_FONT})])); }
-        function addLH() { const rect = new fabric.Rect({ width: 630, height: 15, fill: '#546e7a', stroke: 'black', strokeWidth: 1 }); const text = new fabric.Text("LH", { fontSize: 10, fill: 'black', left: 610, top: 2, fontFamily: DEFAULT_FONT }); let lines = []; for(let i=1; i<6; i++) lines.push(new fabric.Line([i*105, 0, i*105, 15], { stroke: 'black', strokeWidth: 1 })); const group = new fabric.Group([rect, ...lines, text], { left: 420, top: 95, originX: 'center', originY: 'center', lockScalingX: true, lockScalingY: true }); const cvs = getActiveCanvas(); if(cvs) { cvs.add(group); saveHistory(activeCanvasId); } }
-        function addGoldScreen() { const cvs = getActiveCanvas(); if(!cvs) return; const points = [{x:0,y:30}, {x:25,y:0}, {x:50,y:30}, {x:75,y:0}, {x:100,y:30}, {x:125,y:0}, {x:150,y:30}]; const s1 = new fabric.Polyline(points, { fill: 'transparent', stroke: 'black', strokeWidth: 3, left: 270, top: 130, lockScalingX: true, lockScalingY: true }); const s2 = new fabric.Polyline(points, { fill: 'transparent', stroke: 'black', strokeWidth: 3, left: 420, top: 130, lockScalingX: true, lockScalingY: true }); const data = getCanvasData(activeCanvasId); data.isBatchDrawing = true; cvs.add(s1); cvs.add(s2); data.isBatchDrawing = false; saveHistory(activeCanvasId); }
+        function addLH() { 
+            const rect = new fabric.Rect({ width: 630, height: 15, fill: '#546e7a', stroke: 'black', strokeWidth: 1 }); 
+            const text = new fabric.Text("LH", { fontSize: 10, fill: 'black', left: 610, top: 2, fontFamily: DEFAULT_FONT }); 
+            let lines = []; 
+            for(let i=1; i<6; i++) lines.push(new fabric.Line([i*105, 0, i*105, 15], { stroke: 'black', strokeWidth: 1 })); 
+            const group = new fabric.Group([rect, ...lines, text], { left: 420, top: 95, originX: 'center', originY: 'center', lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加
+            applyLayerAttribute(group);
+
+            const cvs = getActiveCanvas(); 
+            if(cvs) { cvs.add(group); saveHistory(activeCanvasId); } 
+        }
+        function addGoldScreen() { 
+            const cvs = getActiveCanvas(); 
+            if(!cvs) return; 
+            const points = [{x:0,y:30}, {x:25,y:0}, {x:50,y:30}, {x:75,y:0}, {x:100,y:30}, {x:125,y:0}, {x:150,y:30}]; 
+            const s1 = new fabric.Polyline(points, { fill: 'transparent', stroke: 'black', strokeWidth: 3, left: 270, top: 130, lockScalingX: true, lockScalingY: true }); 
+            const s2 = new fabric.Polyline(points, { fill: 'transparent', stroke: 'black', strokeWidth: 3, left: 420, top: 130, lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加（2つそれぞれに適用）
+            applyLayerAttribute(s1);
+            applyLayerAttribute(s2);
+
+            const data = getCanvasData(activeCanvasId); 
+            data.isBatchDrawing = true; 
+            cvs.add(s1); 
+            cvs.add(s2); 
+            data.isBatchDrawing = false; 
+            saveHistory(activeCanvasId); 
+        }
         function addPerson() { const body = new fabric.Ellipse({ rx: 14.5, ry: 7, fill: 'white', stroke: 'black', strokeWidth: 1, top: 0, left: 0 }); const head = new fabric.Circle({ radius: 5, fill: 'white', stroke: 'black', strokeWidth: 1, top: 2, left: 9.5 }); const nose = new fabric.Circle({ radius: 2.5, fill: 'black', top: 9, left: 12 }); const group = new fabric.Group([body, head, nose]); addToActiveNoSelect(group); }
         function addChair() { addToActiveFixedNoSelect(new fabric.Rect({ width: 23, height: 28, fill: 'white', stroke: 'black', strokeWidth: 1, rx: 3, ry: 3 })); }
         function addDeskStage() { addToActiveFixedNoSelect(new fabric.Rect({ width: 89, height: 29, fill: '#fff9c4', stroke: 'black', strokeWidth: 1 })); }
         function addDesk() { addToActiveFixedNoSelect(new fabric.Rect({ width: 89, height: 22, fill: '#fff9c4', stroke: 'black', strokeWidth: 1 })); }
-        function addPodium() { const obj = new fabric.Rect({ width: 59, height: 30, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 390, top: 295, lockScalingX: true, lockScalingY: true }); const cvs = getActiveCanvas(); if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
-        function addEmceeDesk() { const obj = new fabric.Rect({ width: 30, height: 25, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 90, top: 405, angle: 340, lockScalingX: true, lockScalingY: true }); const cvs = getActiveCanvas(); if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
-        function addFlowerStand() { const obj = new fabric.Rect({ width: 22, height: 22, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 362, top: 302, lockScalingX: true, lockScalingY: true }); const cvs = getActiveCanvas(); if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
+        function addPodium() { 
+            const obj = new fabric.Rect({ width: 59, height: 30, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 390, top: 295, lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加
+            applyLayerAttribute(obj);
+
+            const cvs = getActiveCanvas(); 
+            if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } 
+        }
+        function addEmceeDesk() { 
+            const obj = new fabric.Rect({ width: 30, height: 25, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 90, top: 405, angle: 340, lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加
+            applyLayerAttribute(obj);
+
+            const cvs = getActiveCanvas(); 
+            if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } 
+        }
+
+        function addFlowerStand() { 
+            const obj = new fabric.Rect({ width: 22, height: 22, fill: '#ffcdd2', stroke: 'black', strokeWidth: 1, left: 362, top: 302, lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加
+            applyLayerAttribute(obj);
+
+            const cvs = getActiveCanvas(); 
+            if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } 
+        }
         function addPlatform46() { addToActiveFixedNoSelect(new fabric.Rect({ width: 89, height: 59, fill: '#ffe0b2', stroke: 'black', strokeWidth: 1 })); }
         function addPlatform36() { addToActiveFixedNoSelect(new fabric.Rect({ width: 89, height: 44, fill: '#ffe0b2', stroke: 'black', strokeWidth: 1 })); }
         function addPlatform26() { addToActiveFixedNoSelect(new fabric.Rect({ width: 89, height: 29, fill: '#ffe0b2', stroke: 'black', strokeWidth: 1 })); }
         function addStairs() { addToActiveFixedNoSelect(new fabric.Rect({ width: 15, height: 45, fill: '#e0e0e0', stroke: 'black', strokeWidth: 1 })); }
-        function addConductor() { const obj = new fabric.Rect({ width: 53, height: 55, fill: '#e0e0e0', stroke: 'black', strokeWidth: 1, left: 393, top: 372, lockScalingX: true, lockScalingY: true }); const cvs = getActiveCanvas(); if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
-        function addStand() { const group = new fabric.Group([new fabric.Path('M 0 0 Q 12.5 -4.0 25 0 L 25 9 L 0 9 Z', {fill: '#e0e0e0', stroke: 'black', strokeWidth: 1}), new fabric.Path('M 12.5 9 L 12.5 14 M 5 14 L 20 14', {fill: 'transparent', stroke: 'black', strokeWidth: 1})], { left: 100, top: 100, lockScalingX: true, lockScalingY: true }); const cvs = getActiveCanvas(); if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
+        function addConductor() { 
+            const obj = new fabric.Rect({ width: 53, height: 55, fill: '#e0e0e0', stroke: 'black', strokeWidth: 1, left: 393, top: 372, lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加
+            applyLayerAttribute(obj);
+
+            const cvs = getActiveCanvas(); 
+            if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } 
+        }
+        function addStand() { 
+            const group = new fabric.Group([new fabric.Path('M 0 0 Q 12.5 -4.0 25 0 L 25 9 L 0 9 Z', {fill: '#e0e0e0', stroke: 'black', strokeWidth: 1}), new fabric.Path('M 12.5 9 L 12.5 14 M 5 14 L 20 14', {fill: 'transparent', stroke: 'black', strokeWidth: 1})], { left: 100, top: 100, lockScalingX: true, lockScalingY: true }); 
+            
+            // ★追加
+            applyLayerAttribute(group);
+
+            const cvs = getActiveCanvas(); 
+            if(cvs) { cvs.add(group); cvs.requestRenderAll(); saveHistory(activeCanvasId); } 
+        }
         function addSpeaker() { addToActiveFixedNoSelect(new fabric.Group([new fabric.Rect({ width: 31, height: 20, fill: 'white', stroke: 'black', strokeWidth: 1 }), new fabric.Path("M 0 20 L 15.5 0 L 31 20 Z", { fill: 'transparent', stroke: 'black', strokeWidth: 1 })])); }
         function addImageObject(input) { const file = input.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { fabric.Image.fromURL(e.target.result, function(img) { img.scaleToWidth(100); addToActive(img); }); }; reader.readAsDataURL(file); input.value = ''; }
 
@@ -1492,13 +1676,35 @@
         function pasteObject() {
             const cvs = getActiveCanvas();
             if (cvs && _clipboard) {
+                // 履歴制御のためにデータを取得
+                const data = getCanvasData(activeCanvasId);
+
                 _clipboard.clone(c => {
                     cvs.discardActiveObject();
+                    
+                    // ★追加：自動保存を一時停止
+                    data.isBatchDrawing = true;
+
+                    applyLayerAttribute(c);
+
                     const width = c.getScaledWidth();
                     if (width > 400) { c.set({ left: c.left + 50, top: c.top + 50, evented: true }); } 
                     else { c.set({ left: c.left + width, top: c.top, evented: true }); }
-                    if (c.type === 'activeSelection') { c.canvas = cvs; c.forEachObject(o => cvs.add(o)); c.setCoords(); } else { cvs.add(c); }
-                    cvs.setActiveObject(c); cvs.requestRenderAll(); saveHistory(activeCanvasId);
+                    
+                    if (c.type === 'activeSelection') { 
+                        c.canvas = cvs; 
+                        c.forEachObject(o => cvs.add(o)); 
+                        c.setCoords(); 
+                    } else { 
+                        cvs.add(c); 
+                    }
+                    
+                    cvs.setActiveObject(c); 
+                    cvs.requestRenderAll(); 
+                    
+                    // ★追加：自動保存を再開して、手動保存（この1回だけ履歴に残す）
+                    data.isBatchDrawing = false;
+                    saveHistory(activeCanvasId);
                 });
             }
         }
@@ -1509,7 +1715,19 @@
         function bringForward(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().bringForward(); saveHistory(activeCanvasId); } }
         function sendBackwards(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().sendBackwards(); saveHistory(activeCanvasId); } }
         function sendToBack(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().sendToBack(); saveHistory(activeCanvasId); } }
-        function groupObjects(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()&&c.getActiveObject().type==='activeSelection') { c.getActiveObject().toGroup(); c.requestRenderAll(); saveHistory(activeCanvasId); } }
+        function groupObjects() {
+            const c = getActiveCanvas();
+            if (c && c.getActiveObject() && c.getActiveObject().type === 'activeSelection') {
+                // toGroup() は新しいグループを作って返すので、それを受け取る
+                const newGroup = c.getActiveObject().toGroup();
+                
+                // ★追加：今のモードに合わせて属性を付与
+                applyLayerAttribute(newGroup);
+
+                c.requestRenderAll();
+                saveHistory(activeCanvasId);
+            }
+        }
         function ungroupObjects(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()&&c.getActiveObject().type==='group') { c.getActiveObject().toActiveSelection(); c.requestRenderAll(); saveHistory(activeCanvasId); } }
         function restoreBackgroundState(cvs) { cvs.getObjects().forEach(o=>{ if(o.isBackground){ o.set({selectable:false,evented:false}); cvs.sendToBack(o); } }); cvs.requestRenderAll(); updateLayerButtonStates(); }
         function saveAllJSON() { 
@@ -1630,36 +1848,28 @@
         function mirrorPaste() {
             const cvs = getActiveCanvas();
             const actObj = cvs.getActiveObject();
-            if (!actObj) return; // 選択されていなければ何もしない
+            if (!actObj) return; 
 
-            // オブジェクトを複製
+            // 履歴制御のためにデータを取得
+            const data = getCanvasData(activeCanvasId);
+
             actObj.clone(function(cloned) {
-                cvs.discardActiveObject(); // 元の選択を解除
+                cvs.discardActiveObject(); 
+                
+                // ★追加：処理中の自動保存を一時停止（これで「追加イベント」による保存を防ぐ）
+                data.isBatchDrawing = true;
 
-                // ▼位置と反転の計算▼
-                // キャンバス幅 840px / 中心 420px
+                applyLayerAttribute(cloned);
+
                 const canvasCenter = 420;
-                
-                // 元のオブジェクトの中心座標を取得
                 const originalCenter = actObj.getCenterPoint();
-                
-                // 中心からの距離を計算し、反対側の座標を求める
-                // 例: 左100px(中心から-320) → 右740px(中心から+320)
-                // 式: 新しいX = 840 - 元のX
                 const newCenterX = (canvasCenter * 2) - originalCenter.x;
 
-                // 複製したオブジェクトを反転させる
-                // (元が反転していれば戻り、していなければ反転する)
                 cloned.set('flipX', !cloned.flipX);
-
-                // 反対側の位置に配置する（中心基準で配置セット）
                 cloned.setPositionByOrigin(new fabric.Point(newCenterX, originalCenter.y), 'center', 'center');
 
-                cloned.set({
-                    evented: true
-                });
+                cloned.set({ evented: true });
 
-                // グループ（複数選択）の場合の処理
                 if (cloned.type === 'activeSelection') {
                     cloned.canvas = cvs;
                     cloned.forEachObject(function(obj) {
@@ -1670,9 +1880,11 @@
                     cvs.add(cloned);
                 }
                 
-                // 複製したものを選択状態にする
                 cvs.setActiveObject(cloned);
                 cvs.requestRenderAll();
+
+                // ★追加：自動保存を再開して、ここで手動保存（この1回だけ履歴に残す）
+                data.isBatchDrawing = false;
                 saveHistory(activeCanvasId);
             });
         }
@@ -1810,6 +2022,135 @@
                 el.style.display = 'flex';
             } else {
                 el.style.display = 'none';
+            }
+        }
+        
+        // --- レイヤー機能（準備中） ---
+        let isLayerMode = false; // レイヤー編集モードかどうか
+        let isLayerVisible = true; // レイヤーが表示されているか
+
+        function toggleLayerMode() {
+            const cvs = getActiveCanvas(); 
+            if(!cvs) return;
+            
+            // 1. モード変数の切り替え
+            isLayerMode = !isLayerMode;
+
+            const area = document.getElementById('canvasContainer');
+            const btn = document.getElementById('btn-layer-mode');
+
+            // 2. 見た目の切り替え
+            if (isLayerMode) {
+                // --- ONの時 ---
+                console.log("レイヤーモード: ON");
+                area.classList.add('layer-mode');
+                btn.classList.add('active');
+                
+                // 強制的にレイヤーを表示する（編集するのに見えないと困るから）
+                if (!isLayerVisible) {
+                    toggleLayerVisibility(true); 
+                }
+            } else {
+                // --- OFFの時 ---
+                console.log("レイヤーモード: OFF");
+                area.classList.remove('layer-mode');
+                btn.classList.remove('active');
+            }
+            
+            // 4. オブジェクトのロック/アンロック（共通処理）
+            updateObjectSelectability(cvs);
+
+            // 5. 選択解除 & 再描画
+            cvs.discardActiveObject();
+            cvs.requestRenderAll();
+        }
+
+        // オブジェクトの触れる/触れないを制御する関数（さっきと同じだけど、念のため再掲）
+        function updateObjectSelectability(cvs) {
+            cvs.getObjects().forEach(o => {
+                // 背景（幕など）は常にロック
+                if (o.isBackground) {
+                    o.set({ selectable: false, evented: false });
+                    return;
+                }
+
+                // レイヤーモードかどうかで判定
+                if (isLayerMode) {
+                    // 【ON】レイヤーオブジェクトだけ触れる
+                    if (o.isLayerObject) {
+                        o.set({ selectable: true, evented: true });
+                    } else {
+                        o.set({ selectable: false, evented: false });
+                    }
+                } else {
+                    // 【OFF】通常オブジェクトだけ触れる
+                    if (o.isLayerObject) {
+                        o.set({ selectable: false, evented: false });
+                    } else {
+                        o.set({ selectable: true, evented: true });
+                    }
+                }
+            });
+        }
+
+        // オブジェクトの触れる/触れないを切り替える関数
+        function updateObjectSelectability(cvs) {
+            // 背景画像以外の全てのオブジェクトを走査
+            cvs.getObjects().forEach(o => {
+                // 背景（幕とか）は常にロックなので無視
+                if (o.isBackground) return;
+
+                if (isLayerMode) {
+                    // 【レイヤーモード中】
+                    if (o.isLayerObject) {
+                        // レイヤーオブジェクト → 触れる
+                        o.set({ selectable: true, evented: true });
+                    } else {
+                        // 普通のオブジェクト → ロック（触れない）
+                        o.set({ selectable: false, evented: false });
+                    }
+                } else {
+                    // 【通常モード中】
+                    if (o.isLayerObject) {
+                        // レイヤーオブジェクト → ロック（触れない）
+                        o.set({ selectable: false, evented: false });
+                    } else {
+                        // 普通のオブジェクト → 触れる
+                        o.set({ selectable: true, evented: true });
+                    }
+                }
+            });
+        }
+
+        function toggleLayerVisibility(forceState = null) {
+            const btn = document.getElementById('btn-layer-vis');
+            
+            // 引数があればそれに従う、なければトグル
+            if (forceState !== null) {
+                isLayerVisible = forceState;
+            } else {
+                isLayerVisible = !isLayerVisible;
+            }
+
+            // ボタンの見た目切り替え
+            if (isLayerVisible) {
+                btn.classList.add('active');
+                btn.textContent = "👁️ ON";
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = "🚫 OFF";
+            }
+            
+            // 実際の表示/非表示の処理は、キャンバスの描画更新時にやる必要があるから
+            // また後で調整するけど、とりあえずフラグ管理はこれでOK！
+            const cvs = getActiveCanvas();
+            if(cvs) {
+                cvs.getObjects().forEach(o => {
+                    if(o.isLayerObject) {
+                        o.set('visible', isLayerVisible);
+                    }
+                });
+                cvs.requestRenderAll();
             }
         }
 
