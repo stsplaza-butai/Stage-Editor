@@ -565,7 +565,7 @@
             'isLayerObject'
         ];
         const BASE_WIDTH = 840;
-        const LS_KEY = 'stage_editor_autosave_v2';
+        const LS_KEY = 'stage_editor_autosave';
         
         let canvasList = []; 
         let activeCanvasId = null;
@@ -2001,7 +2001,7 @@
             if(p) nameParts.push(p);
 
             const baseName = nameParts.length > 0 ? nameParts.join("_") : "stage_plan";
-            const fn = `${baseName}_v2.json`;
+            const fn = `${baseName}.json`;
             // ▲▲▲ 変更ここまで ▲▲▲
 
             const blob = new Blob([JSON.stringify(dataToSave)], {type: "application/json"}); 
