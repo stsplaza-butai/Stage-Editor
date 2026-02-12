@@ -903,21 +903,52 @@
         }
 
         function activateCanvas(id) {
-            const block = document.getElementById('block_' + id);
-            if(block) {
-                block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 1. 未選択のものが選ばれた時だけ、自動スクロール
+            if (activeCanvasId !== id) {
+                const block = document.getElementById('block_' + id);
+                if(block) {
+                    block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
+            
             activeCanvasId = id;
-            document.querySelectorAll('.canvas-block').forEach(b => b.classList.remove('active'));
-            const idx = canvasList.findIndex(c => c.id === id);
-            if (idx > -1) {
-                const target = canvasList[idx];
-                target.blockElement.classList.add('active');
-                document.getElementById('activeCanvasName').textContent = `キャンバス ${idx + 1}`;
-                const zoomVal = target.canvasObj.getZoom();
-                document.getElementById('zoomVal').textContent = Math.round(zoomVal * 100) + '%';
-                updateLayerButtonStates();
-            }
+
+            // 2. 全キャンバスをループして、「編集許可設定」と「見た目のactiveクラス」をまとめて更新
+            canvasList.forEach((data, index) => {
+                const cvs = data.canvasObj;
+                const isActive = (data.id === id);
+
+                // --- A. Fabric.js (キャンバス操作) の制御 ---
+                if (isActive) {
+                    cvs.selection = true;         // 範囲選択OK
+                    cvs.skipTargetFind = false;   // オブジェクト編集OK
+                    cvs.defaultCursor = 'default';
+                } else {
+                    cvs.discardActiveObject();    // 選択中のものがあれば解除
+                    cvs.selection = false;        // 範囲選択禁止
+                    cvs.skipTargetFind = true;    // ★重要：オブジェクトをクリックしても反応させない！
+                    cvs.defaultCursor = 'pointer';// 「ここをクリックすれば選択できるよ」というカーソル
+                }
+                cvs.requestRenderAll();
+
+                // --- B. HTML要素 (見た目) の制御 ---
+                if (data.blockElement) {
+                    if (isActive) {
+                        data.blockElement.classList.add('active');
+                        
+                        // 画面右上の情報更新
+                        const nameEl = document.getElementById('activeCanvasName');
+                        if(nameEl) nameEl.textContent = `キャンバス ${index + 1}`;
+                        
+                        const zoomEl = document.getElementById('zoomVal');
+                        if(zoomEl) zoomEl.textContent = Math.round(cvs.getZoom() * 100) + '%';
+                        
+                        updateLayerButtonStates();
+                    } else {
+                        data.blockElement.classList.remove('active');
+                    }
+                }
+            });
         }
 
         function getActiveCanvas() { if(!activeCanvasId && canvasList.length > 0) activateCanvas(canvasList[0].id); return canvasList.find(c => c.id === activeCanvasId)?.canvasObj; }
