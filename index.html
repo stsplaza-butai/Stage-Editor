@@ -903,6 +903,10 @@
         }
 
         function activateCanvas(id) {
+            const block = document.getElementById('block_' + id);
+            if(block) {
+                block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             activeCanvasId = id;
             document.querySelectorAll('.canvas-block').forEach(b => b.classList.remove('active'));
             const idx = canvasList.findIndex(c => c.id === id);
