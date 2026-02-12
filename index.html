@@ -257,7 +257,7 @@
 <body>
 
     <header>
-        <div class="title">🎨 舞台図面エディター Ver3.0</div>
+        <div class="title">🎨 舞台図面エディター Ver3.2</div>
         <div class="input-group"><label>📅</label><input type="date" id="eventDate"></div>
         <div class="input-group"><label>🏷️</label><input type="text" id="eventName" placeholder="イベント名"></div>
         <div class="input-group"><label>📍</label><input type="text" id="eventPlace" placeholder="場所"></div>
@@ -531,7 +531,7 @@
                 <br>　　　　キャンバスの ☑️ 書出 チェックを外すと書出しから除外されます。</li>
                 <li><strong>日付・イベント名・場所：</strong> 入力してあるとファイル名に反映されます。</li>
                 <li><strong>打刻：</strong> 日付・イベント名・場所をキャンバスに配置。</li>
-                <li><strong>レイヤーモード：</strong> レイヤー編集モードに切り替え。レイヤーは手前に１枚のみ。</li>            
+                <li><strong>レイヤーモード：</strong> レイヤー編集モードに切り替え。レイヤー？</li>            
             </ul>
 
             <h3>⌨️ ショートカットキー</h3>
@@ -944,23 +944,49 @@
         }
 
         function setupCanvasEvents(cvs, id) {
-            cvs.on('object:added', (e) => { if(!e.target.excludeFromExport && !getCanvasData(id).isBatchDrawing) saveHistory(id); });
+            // ▼▼▼ ここから修正：追加された瞬間に階層を整理する ▼▼▼
+            cvs.on('object:added', (e) => {
+                const obj = e.target;
+                const data = getCanvasData(id);
+
+                // 読み込み中（BatchDrawing）の時は、重たくなるので整列しない
+                if (!data.isBatchDrawing) {
+                    
+                    // 1. 自分の階層（ティア）を取得
+                    // (前回のコードで追加した getObjectTier 関数を使います)
+                    const myTier = getObjectTier(obj);
+                    const objects = cvs.getObjects();
+                    
+                    // 2. 自分より偉い階層（ティアが高い）のオブジェクトがどこから始まっているか探す
+                    // （例：自分がキャンバス用なら、レイヤー用オブジェクトの場所を探す）
+                    const higherTierIndex = objects.findIndex(o => getObjectTier(o) > myTier);
+                    
+                    // 3. もし自分より偉い人がいて、自分がそれより上にいたら（＝順序が逆なら）
+                    if (higherTierIndex > -1 && objects.indexOf(obj) > higherTierIndex) {
+                        // 偉い人の直前（その階層の一番下）に割り込ませる
+                        obj.moveTo(higherTierIndex);
+                    }
+                }
+
+                // 履歴保存の処理（ここは元のまま）
+                if(!obj.excludeFromExport && !data.isBatchDrawing) saveHistory(id); 
+            });
+            // ▲▲▲ 修正ここまで ▲▲▲
+
             cvs.on('object:modified', () => saveHistory(id));
             cvs.on('object:removed', () => { if(!getCanvasData(id).isBatchDrawing) saveHistory(id); });
+            
+            // ...（以下の mouse:move などはそのまま触らなくてOK）...
             cvs.on('mouse:move', (opt) => { if(id === activeCanvasId) { const p = cvs.getPointer(opt.e); document.getElementById('mouseCoords').textContent = `X: ${Math.round(p.x)} Y: ${Math.round(p.y)}`; } });
-            cvs.on('selection:created', updateObjStatus); cvs.on('selection:updated', updateObjStatus); cvs.on('selection:cleared', updateObjStatus); cvs.on('object:modified', updateObjStatus); // 既存のイベントリスナー（選択や変形終了時）
             cvs.on('selection:created', updateObjStatus); 
             cvs.on('selection:updated', updateObjStatus); 
             cvs.on('selection:cleared', updateObjStatus); 
             cvs.on('object:modified', updateObjStatus); 
             
-            //普段は15度刻み、Shiftでフリー回転
             cvs.on('object:rotating', function(opt) {
                 updateObjStatus();
-
-                // Shiftキーが「押されていない(!)」時にスナップ処理をする
                 if (!opt.e.shiftKey && opt.target) {
-                    const step = 15; // 15度刻み
+                    const step = 15; 
                     const snapped = Math.round(opt.target.angle / step) * step;
                     opt.target.rotate(snapped);
                 }
@@ -1259,15 +1285,22 @@
             if(!cvs) return; 
             const positions = [140, 190, 840 - 190 - 45, 840 - 140 - 45]; 
             const data = getCanvasData(activeCanvasId); 
+            
             data.isBatchDrawing = true; 
+            
             positions.forEach(x => { 
-                const rect = new fabric.Rect({ left: x, top: 100, width: 45, height: 25, fill: 'white', stroke: 'black', strokeWidth: 1 });
+                const rect = new fabric.Rect({ 
+                    left: x, top: 100, width: 45, height: 25, 
+                    fill: 'white', stroke: 'black', strokeWidth: 1,
+                    // ★追加：拡大縮小をロック
+                    lockScalingX: true, 
+                    lockScalingY: true
+                });
                 
-                // ★追加（ループの中で個別に適用）
                 applyLayerAttribute(rect);
-
                 cvs.add(rect); 
             }); 
+            
             data.isBatchDrawing = false; 
             saveHistory(activeCanvasId); 
         }
@@ -1306,7 +1339,15 @@
             data.isBatchDrawing = false; 
             saveHistory(activeCanvasId); 
         }
-        function addPerson() { const body = new fabric.Ellipse({ rx: 14.5, ry: 7, fill: 'white', stroke: 'black', strokeWidth: 1, top: 0, left: 0 }); const head = new fabric.Circle({ radius: 5, fill: 'white', stroke: 'black', strokeWidth: 1, top: 2, left: 9.5 }); const nose = new fabric.Circle({ radius: 2.5, fill: 'black', top: 9, left: 12 }); const group = new fabric.Group([body, head, nose]); addToActiveNoSelect(group); }
+        function addPerson() { 
+            const body = new fabric.Ellipse({ rx: 14.5, ry: 7, fill: 'white', stroke: 'black', strokeWidth: 1, top: 0, left: 0 }); 
+            const head = new fabric.Circle({ radius: 6, fill: 'white', stroke: 'black', strokeWidth: 1, top: 1.5, left: 9 }); 
+            const nose = new fabric.Circle({ radius: 2.5, fill: 'black', top: 11, left: 12.5 }); 
+            const group = new fabric.Group([body, head, nose]); 
+            
+            // ★変更：Fixed（固定）版の関数を使うことで、拡大縮小をロックする
+            addToActiveFixedNoSelect(group); 
+        }
         function addChair() { addToActiveFixedNoSelect(new fabric.Rect({ width: 23, height: 28, fill: 'white', stroke: 'black', strokeWidth: 1, rx: 3, ry: 3 })); }
         function addDeskStage() { addToActiveFixedNoSelect(new fabric.Rect({ width: 89, height: 29, fill: '#fff9c4', stroke: 'black', strokeWidth: 1 })); }
         function addDesk() { addToActiveFixedNoSelect(new fabric.Rect({ width: 89, height: 22, fill: '#fff9c4', stroke: 'black', strokeWidth: 1 })); }
@@ -1352,7 +1393,7 @@
             if(cvs) { cvs.add(obj); cvs.requestRenderAll(); saveHistory(activeCanvasId); } 
         }
         function addStand() { 
-            const group = new fabric.Group([new fabric.Path('M 0 0 Q 12.5 -4.0 25 0 L 25 9 L 0 9 Z', {fill: '#e0e0e0', stroke: 'black', strokeWidth: 1}), new fabric.Path('M 12.5 9 L 12.5 14 M 5 14 L 20 14', {fill: 'transparent', stroke: 'black', strokeWidth: 1})], { left: 100, top: 100, lockScalingX: true, lockScalingY: true }); 
+            const group = new fabric.Group([new fabric.Path('M 0 0 Q 12.5 -4.0 25 0 L 25 9 L 0 9 Z', {fill: '#e0e0e0', stroke: 'black', strokeWidth: 1}), new fabric.Path('M 12.5 9 L 12.5 14 M 5 14 L 20 14', {fill: 'transparent', stroke: 'black', strokeWidth: 1})], { left: 408, top: 320, lockScalingX: true, lockScalingY: true }); 
             
             // ★追加
             applyLayerAttribute(group);
@@ -1563,7 +1604,38 @@
         }
         
         function createChairRow(count, x, y, angle) { let chairs = []; for(let i=0; i<count; i++) chairs.push(new fabric.Rect({width: 23, height: 28, left: i * 23, top: 0, fill: 'white', stroke: 'black', strokeWidth: 1, rx: 3, ry: 3 })); return new fabric.Group(chairs, { left: x, top: y, angle: angle || 0, originX: 'left', originY: 'top' }); }
-        function addFrontAudience() { const cvs = getActiveCanvas(); if(!cvs) return; const data = getCanvasData(activeCanvasId); data.isBatchDrawing = true; const addLockedChair = (count, x, y, angle) => { const grp = createChairRow(count, x, y, angle); grp.set({ lockScalingX: true, lockScalingY: true }); cvs.add(grp); }; const patternA_Y = [526, 577, 625, 676, 729]; patternA_Y.forEach(y => { addLockedChair(7, 82, y, 15); addLockedChair(7, 840 - 82 - (7*23) + 4, y + 42, -15); }); const patternB_Y = [579, 673, 767]; patternB_Y.forEach(y => { addLockedChair(12, 284, y, 0); }); const patternC_Y = [627, 721, 874]; patternC_Y.forEach(y => { addLockedChair(11, 295, y, 0); }); const patternD_Y = [874]; patternD_Y.forEach(y => { addLockedChair(7, 75, y, 0); addLockedChair(7, 840 - 75 - (7*23), y, 0); }); data.isBatchDrawing = false; saveHistory(activeCanvasId); }
+        function addFrontAudience() { 
+            const cvs = getActiveCanvas(); 
+            if(!cvs) return; 
+            const data = getCanvasData(activeCanvasId); 
+            
+            data.isBatchDrawing = true; 
+            
+            const addLockedChair = (count, x, y, angle) => { 
+                const grp = createChairRow(count, x, y, angle); 
+                grp.set({ lockScalingX: true, lockScalingY: true }); 
+                
+                // ★追加：ここで属性を適用！
+                applyLayerAttribute(grp);
+                
+                cvs.add(grp); 
+            }; 
+
+            const patternA_Y = [526, 577, 625, 676, 729]; 
+            patternA_Y.forEach(y => { addLockedChair(7, 82, y, 15); addLockedChair(7, 840 - 82 - (7*23) + 4, y + 42, -15); }); 
+            
+            const patternB_Y = [579, 673, 767]; 
+            patternB_Y.forEach(y => { addLockedChair(12, 284, y, 0); }); 
+            
+            const patternC_Y = [627, 721, 874]; 
+            patternC_Y.forEach(y => { addLockedChair(11, 295, y, 0); }); 
+            
+            const patternD_Y = [874]; 
+            patternD_Y.forEach(y => { addLockedChair(7, 75, y, 0); addLockedChair(7, 840 - 75 - (7*23), y, 0); }); 
+            
+            data.isBatchDrawing = false; 
+            saveHistory(activeCanvasId); 
+        }
 
         // --- 吊バトン（美術バトン） ---
         function addBattens(cvs) {
@@ -1671,21 +1743,65 @@
         function applyStyle(p,v) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const a=cvs.getActiveObject(); if(a.type==='activeSelection') a.getObjects().forEach(o=>o.set(p,v)); else a.set(p,v); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function applyLineStyle(styleType) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const a=cvs.getActiveObject(); const da = (styleType === 'dashed') ? [5, 5] : null; if(a.type==='activeSelection') a.getObjects().forEach(o=>o.set('strokeDashArray',da)); else a.set('strokeDashArray',da); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
         function applyOpacity(v) { const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()){ const o=parseInt(v,10)/100; const a=cvs.getActiveObject(); if(a.type==='activeSelection') a.getObjects().forEach(obj=>obj.set('opacity',o)); else a.set('opacity',o); cvs.requestRenderAll(); saveHistory(activeCanvasId); } }
-        function copyObject(){ const cvs=getActiveCanvas(); if(cvs && cvs.getActiveObject()) cvs.getActiveObject().clone(c=>_clipboard=c); }
+        function copyObject() {
+            const cvs = getActiveCanvas();
+            const activeObject = cvs.getActiveObject();
+            if (activeObject) {
+                // PROPERTIES_TO_INCLUDE を渡して、中身のプロパティもしっかりコピー
+                activeObject.clone(function(cloned) {
+                    _clipboard = cloned;
+
+                    // 1. 単体のロック設定を引き継ぐ（さっきの処理）
+                    // ※グループそのものにロックがかかっている場合もここで対応
+                    if (activeObject.lockScalingX) { _clipboard.set('lockScalingX', true); }
+                    if (activeObject.lockScalingY) { _clipboard.set('lockScalingY', true); }
+                    if (activeObject.lockRotation) { _clipboard.set('lockRotation', true); }
+
+                    // 2. 【追加】グループ・複数選択の中身をチェック！
+                    // 中身のオブジェクトが「すべて」ロックされていたら、外側の枠もロックする
+                    if (activeObject.type === 'activeSelection' || activeObject.type === 'group') {
+                        let allChildrenLocked = true;
+                        
+                        // 元のオブジェクトの中身を走査
+                        activeObject.getObjects().forEach(o => {
+                            // どれか一つでもロックされていなければ、ロックしない（混在時は自由変形できるようにする）
+                            if (!o.lockScalingX || !o.lockScalingY) {
+                                allChildrenLocked = false;
+                            }
+                        });
+
+                        // 全員ロックなら、クリップボードの親玉もロック！
+                        if (allChildrenLocked) {
+                            _clipboard.set({
+                                lockScalingX: true,
+                                lockScalingY: true
+                            });
+                            // 回転ロックも全員かかっていればかける？（今回は拡大縮小を優先）
+                        }
+                    }
+
+                }, PROPERTIES_TO_INCLUDE);
+            }
+        }
         
         function pasteObject() {
             const cvs = getActiveCanvas();
             if (cvs && _clipboard) {
-                // 履歴制御のためにデータを取得
                 const data = getCanvasData(activeCanvasId);
 
                 _clipboard.clone(c => {
                     cvs.discardActiveObject();
                     
-                    // ★追加：自動保存を一時停止
                     data.isBatchDrawing = true;
 
                     applyLayerAttribute(c);
+
+                    // ★追加：元のオブジェクトのロック設定を引き継ぐ
+                    c.set({
+                        lockScalingX: _clipboard.lockScalingX,
+                        lockScalingY: _clipboard.lockScalingY,
+                        lockRotation: _clipboard.lockRotation
+                    });
 
                     const width = c.getScaledWidth();
                     if (width > 400) { c.set({ left: c.left + 50, top: c.top + 50, evented: true }); } 
@@ -1693,28 +1809,167 @@
                     
                     if (c.type === 'activeSelection') { 
                         c.canvas = cvs; 
-                        c.forEachObject(o => cvs.add(o)); 
+                        c.forEachObject(o => {
+                            cvs.add(o);
+                            autoSortObject(cvs, o);
+                        });
                         c.setCoords(); 
                     } else { 
                         cvs.add(c); 
+                        autoSortObject(cvs, c);
                     }
                     
                     cvs.setActiveObject(c); 
                     cvs.requestRenderAll(); 
                     
-                    // ★追加：自動保存を再開して、手動保存（この1回だけ履歴に残す）
                     data.isBatchDrawing = false;
                     saveHistory(activeCanvasId);
                 });
             }
         }
         
+        // オブジェクト単体の階層ズレを直す関数
+        function autoSortObject(cvs, obj) {
+            const myTier = getObjectTier(obj);
+            const objects = cvs.getObjects();
+            
+            // 自分より偉い階層のオブジェクトを探す
+            const higherTierIndex = objects.findIndex(o => getObjectTier(o) > myTier);
+            
+            // もし見つかって、かつ自分がそれより上にいたら、割り込ませる
+            if (higherTierIndex > -1 && objects.indexOf(obj) > higherTierIndex) {
+                obj.moveTo(higherTierIndex);
+            }
+        }
+
         function alignObjects(type) { const cvs = getActiveCanvas(); if (!cvs || !cvs.getActiveObject() || cvs.getActiveObject().type !== 'activeSelection') return; const activeSel = cvs.getActiveObject(); const tl = activeSel.getPointByOrigin('left', 'top'); const br = activeSel.getPointByOrigin('right', 'bottom'); const r = { left: tl.x, top: tl.y, width: br.x - tl.x, height: br.y - tl.y }; const objs = [...activeSel.getObjects()]; cvs.discardActiveObject(); objs.forEach(o => { const c = o.getCenterPoint(); switch(type) { case 'left': o.setPositionByOrigin(new fabric.Point(r.left, c.y), 'left', 'center'); break; case 'center': o.setPositionByOrigin(new fabric.Point(r.left + r.width/2, c.y), 'center', 'center'); break; case 'right': o.setPositionByOrigin(new fabric.Point(r.left + r.width, c.y), 'right', 'center'); break; case 'top': o.setPositionByOrigin(new fabric.Point(c.x, r.top), 'center', 'top'); break; case 'middle': o.setPositionByOrigin(new fabric.Point(c.x, r.top + r.height/2), 'center', 'center'); break; case 'bottom': o.setPositionByOrigin(new fabric.Point(c.x, r.top + r.height), 'center', 'bottom'); break; } o.setCoords(); }); const newSel = new fabric.ActiveSelection(objs, { canvas: cvs }); cvs.setActiveObject(newSel); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
         function distributeObjects(axis) { const cvs=getActiveCanvas(); if(!cvs || !cvs.getActiveObject() || cvs.getActiveObject().type!=='activeSelection') return; const objs=cvs.getActiveObject().getObjects(); if(objs.length<3)return; cvs.discardActiveObject(); if(axis==='x') { objs.sort((a,b)=>a.getCenterPoint().x-b.getCenterPoint().x); const step=(objs[objs.length-1].getCenterPoint().x - objs[0].getCenterPoint().x)/(objs.length-1); objs.forEach((o,i)=>{ o.setPositionByOrigin(new fabric.Point(objs[0].getCenterPoint().x+step*i, o.getCenterPoint().y),'center','center'); o.setCoords(); }); } else { objs.sort((a,b)=>a.getCenterPoint().y-b.getCenterPoint().y); const step=(objs[objs.length-1].getCenterPoint().y - objs[0].getCenterPoint().y)/(objs.length-1); objs.forEach((o,i)=>{ o.setPositionByOrigin(new fabric.Point(o.getCenterPoint().x, objs[0].getCenterPoint().y+step*i),'center','center'); o.setCoords(); }); } cvs.setActiveObject(new fabric.ActiveSelection(objs,{canvas:cvs})); cvs.requestRenderAll(); saveHistory(activeCanvasId); }
-        function bringToFront(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().bringToFront(); saveHistory(activeCanvasId); } }
-        function bringForward(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().bringForward(); saveHistory(activeCanvasId); } }
-        function sendBackwards(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().sendBackwards(); saveHistory(activeCanvasId); } }
-        function sendToBack(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()){ c.getActiveObject().sendToBack(); saveHistory(activeCanvasId); } }
+        
+        // --- 階層（Z-index）制御のためのヘルパー関数 ---
+        
+        // オブジェクトがどの階層に属すべきかを判定する（数値が大きいほど上）
+        function getObjectTier(obj) {
+            if (obj.isLayerObject) return 3; // レイヤー（最上位）
+            if (obj.isBackground) return 1;  // 背景（最下位）
+            return 2;                        // キャンバス（中間）
+        }
+
+        // --- 4つのボタン機能を上書き ---
+
+        function bringToFront() {
+            const cvs = getActiveCanvas();
+            const obj = cvs.getActiveObject();
+            if (!obj) return;
+
+            const myTier = getObjectTier(obj);
+            const objects = cvs.getObjects();
+            
+            // 自分より上の階層のオブジェクトの中で、一番下にあるもののインデックスを探す
+            // なければ「全オブジェクトの最後（最前面）」がターゲット
+            let targetIndex = objects.length;
+
+            for (let i = 0; i < objects.length; i++) {
+                const otherTier = getObjectTier(objects[i]);
+                if (otherTier > myTier) {
+                    // 自分より偉い階層が見つかったら、その手前までしか行けない
+                    targetIndex = i;
+                    break;
+                }
+            }
+            
+            // Fabric.jsのmoveToは「指定したインデックスに割り込む」挙動
+            // 自分より上の階層の「直前」に滑り込ませる
+            // ただし、自分が既にその位置にいる場合は何もしない（チラつき防止）
+            const currentIndex = objects.indexOf(obj);
+            
+            // 移動先が自分より後ろなら、インデックス調整が必要（配列から自分が抜ける分）
+            let finalIndex = targetIndex;
+            if (currentIndex < targetIndex) {
+                finalIndex = targetIndex - 1;
+            }
+            
+            obj.moveTo(finalIndex);
+            saveHistory(activeCanvasId);
+        }
+
+        function bringForward() {
+            const cvs = getActiveCanvas();
+            const obj = cvs.getActiveObject();
+            if (!obj) return;
+
+            const myTier = getObjectTier(obj);
+            const objects = cvs.getObjects();
+            const currentIndex = objects.indexOf(obj);
+
+            // 一つ上のオブジェクトが存在するかチェック
+            if (currentIndex < objects.length - 1) {
+                const nextObj = objects[currentIndex + 1];
+                const nextTier = getObjectTier(nextObj);
+
+                // もし一つ上が「自分より上の階層」だったら、そこには行けない
+                if (nextTier > myTier) {
+                    console.log("これ以上手前には移動できません（上のレイヤーがあります）");
+                    return; 
+                }
+                
+                // 同じ階層、または下の階層なら移動OK
+                cvs.bringForward(obj);
+                saveHistory(activeCanvasId);
+            }
+        }
+
+        function sendBackwards() {
+            const cvs = getActiveCanvas();
+            const obj = cvs.getActiveObject();
+            if (!obj) return;
+
+            const myTier = getObjectTier(obj);
+            const objects = cvs.getObjects();
+            const currentIndex = objects.indexOf(obj);
+
+            // 一つ下のオブジェクトが存在するかチェック
+            if (currentIndex > 0) {
+                const prevObj = objects[currentIndex - 1];
+                const prevTier = getObjectTier(prevObj);
+
+                // もし一つ下が「自分より下の階層（背景など）」だったら、そこには行けない
+                if (prevTier < myTier) {
+                    console.log("これ以上奥には移動できません（背景または下のレイヤーがあります）");
+                    return;
+                }
+
+                // 同じ階層なら移動OK
+                cvs.sendBackwards(obj);
+                saveHistory(activeCanvasId);
+            }
+        }
+
+        function sendToBack() {
+            const cvs = getActiveCanvas();
+            const obj = cvs.getActiveObject();
+            if (!obj) return;
+
+            const myTier = getObjectTier(obj);
+            const objects = cvs.getObjects();
+            
+            // 自分より下の階層のオブジェクトの中で、一番上にあるもののインデックスを探す
+            // なければ「0（最背面）」がターゲット
+            let targetIndex = 0;
+
+            // 後ろから探したほうが早い（自分より下の階層の最上位を見つける）
+            for (let i = objects.length - 1; i >= 0; i--) {
+                const otherTier = getObjectTier(objects[i]);
+                if (otherTier < myTier) {
+                    // 自分より下の階層が見つかったら、その「一つ上」が限界
+                    targetIndex = i + 1;
+                    break;
+                }
+            }
+
+            obj.moveTo(targetIndex);
+            saveHistory(activeCanvasId);
+        }
+
         function groupObjects() {
             const c = getActiveCanvas();
             if (c && c.getActiveObject() && c.getActiveObject().type === 'activeSelection') {
@@ -1850,16 +2105,21 @@
             const actObj = cvs.getActiveObject();
             if (!actObj) return; 
 
-            // 履歴制御のためにデータを取得
             const data = getCanvasData(activeCanvasId);
 
             actObj.clone(function(cloned) {
                 cvs.discardActiveObject(); 
                 
-                // ★追加：処理中の自動保存を一時停止（これで「追加イベント」による保存を防ぐ）
                 data.isBatchDrawing = true;
 
                 applyLayerAttribute(cloned);
+
+                // ★追加：元のオブジェクトのロック設定を引き継ぐ
+                cloned.set({
+                    lockScalingX: actObj.lockScalingX,
+                    lockScalingY: actObj.lockScalingY,
+                    lockRotation: actObj.lockRotation
+                });
 
                 const canvasCenter = 420;
                 const originalCenter = actObj.getCenterPoint();
@@ -1874,16 +2134,17 @@
                     cloned.canvas = cvs;
                     cloned.forEachObject(function(obj) {
                         cvs.add(obj);
+                        autoSortObject(cvs, obj);
                     });
                     cloned.setCoords();
                 } else {
                     cvs.add(cloned);
+                    autoSortObject(cvs, cloned);
                 }
                 
                 cvs.setActiveObject(cloned);
                 cvs.requestRenderAll();
 
-                // ★追加：自動保存を再開して、ここで手動保存（この1回だけ履歴に残す）
                 data.isBatchDrawing = false;
                 saveHistory(activeCanvasId);
             });
@@ -2005,6 +2266,7 @@
                 cvs.renderOnAddRemove = false;
                 
                 objects.forEach(function(o) {
+                    applyLayerAttribute(o);
                     cvs.add(o);
                 });
 
@@ -2033,34 +2295,48 @@
             const cvs = getActiveCanvas(); 
             if(!cvs) return;
             
-            // 1. モード変数の切り替え
             isLayerMode = !isLayerMode;
 
             const area = document.getElementById('canvasContainer');
             const btn = document.getElementById('btn-layer-mode');
 
-            // 2. 見た目の切り替え
             if (isLayerMode) {
-                // --- ONの時 ---
                 console.log("レイヤーモード: ON");
                 area.classList.add('layer-mode');
                 btn.classList.add('active');
-                
-                // 強制的にレイヤーを表示する（編集するのに見えないと困るから）
-                if (!isLayerVisible) {
-                    toggleLayerVisibility(true); 
-                }
+                if (!isLayerVisible) toggleLayerVisibility(true); 
             } else {
-                // --- OFFの時 ---
                 console.log("レイヤーモード: OFF");
                 area.classList.remove('layer-mode');
                 btn.classList.remove('active');
             }
-            
-            // 4. オブジェクトのロック/アンロック（共通処理）
-            updateObjectSelectability(cvs);
 
-            // 5. 選択解除 & 再描画
+            // --- ★ここから修正：階層順序を正しく整列させる処理 ---
+            
+            // 1. 履歴に残らないようにバッチ処理扱いにする
+            const data = getCanvasData(activeCanvasId);
+            const wasBatch = data.isBatchDrawing; // 元の状態を保存
+            data.isBatchDrawing = true;
+
+            // 2. 現在の全オブジェクトを取得してコピー
+            const allObjs = cvs.getObjects().slice();
+            
+            // 3. 一旦すべてキャンバスから取り除く（これでリストをクリーンにする）
+            cvs.remove(...allObjs);
+            
+            // 4. ティア（階層）順に並べ替える
+            // 背景(1) -> キャンバス(2) -> レイヤー(3) の順
+            allObjs.sort((a, b) => getObjectTier(a) - getObjectTier(b));
+            
+            // 5. 並べ替えた順に一つずつ戻す
+            allObjs.forEach(o => cvs.add(o));
+
+            // 6. バッチ処理解除（元の状態に戻す）
+            data.isBatchDrawing = wasBatch;
+
+            // --- 修正ここまで ---
+            
+            updateObjectSelectability(cvs);
             cvs.discardActiveObject();
             cvs.requestRenderAll();
         }
