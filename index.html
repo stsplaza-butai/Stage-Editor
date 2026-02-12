@@ -679,7 +679,7 @@
             `;
             
             container.insertBefore(block, addBtnContainer); 
-
+            block.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
             fCanvas.backgroundColor = "white";
             
@@ -706,6 +706,7 @@
             saveHistory(id); 
             
             document.getElementById('zoomVal').textContent = '100%';
+            
         }
 
         function addMeetingCanvasBlock() {
@@ -740,7 +741,7 @@
             `;
             
             container.insertBefore(block, addBtnContainer); 
-
+            block.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
             fCanvas.backgroundColor = "white";
             fCanvas.setZoom(1); 
