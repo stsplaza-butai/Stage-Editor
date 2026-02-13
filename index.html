@@ -257,7 +257,7 @@
 <body>
 
     <header>
-        <div class="title">🎨 舞台図面エディター Ver3.2</div>
+        <div class="title">🎨 舞台図面エディター Ver3.3</div>
         <div class="input-group"><label>📅</label><input type="date" id="eventDate"></div>
         <div class="input-group"><label>🏷️</label><input type="text" id="eventName" placeholder="イベント名"></div>
         <div class="input-group"><label>📍</label><input type="text" id="eventPlace" placeholder="場所"></div>
@@ -586,19 +586,26 @@
             showSaveStatus();
         }
 
-        function saveToAutoSave() {
+       function saveToAutoSave() {
             const dataToSave = {
+                version: "3.2",
                 meta: {
                     date: document.getElementById('eventDate').value,
-                    name: document.getElementById('eventName').value,
+                    title: document.getElementById('eventName').value,
                     place: document.getElementById('eventPlace').value
                 },
-                canvases: canvasList.map(c => ({
+                data: canvasList.map(c => ({
+                    id: c.id,
                     height: c.heightState,
+                    isMeetingSheet: c.isMeetingSheet || false, 
                     json: c.canvasObj.toJSON(PROPERTIES_TO_INCLUDE)
                 }))
             };
-            try { localStorage.setItem(LS_KEY, JSON.stringify(dataToSave)); } catch (e) { console.warn(e); }
+            try { 
+                localStorage.setItem(LS_KEY, JSON.stringify(dataToSave)); 
+            } catch (e) { 
+                console.warn("AutoSave failed:", e); 
+            }
         }
 
         function showSaveStatus() {
@@ -611,27 +618,47 @@
 
         function loadFromAutoSave() {
             const savedData = localStorage.getItem(LS_KEY);
-            if (!savedData) { alert('前回の保存データが見つかりません。'); return; }
+            if (!savedData) { 
+                alert('前回の保存データが見つかりません。'); 
+                return; 
+            }
             if(!confirm('現在作業中の内容は破棄され、前回の続きから再開します。\nよろしいですか？')) return;
 
             try {
                 const content = JSON.parse(savedData);
-                canvasList.forEach(c => { c.canvasObj.dispose(); c.blockElement.remove(); });
-                canvasList = []; activeCanvasId = null;
+                
+                // 1. 既存のキャンバスをクリア（ここはそのまま）
+                canvasList.forEach(c => { 
+                    c.canvasObj.dispose(); 
+                    c.blockElement.remove(); 
+                });
+                canvasList = []; 
+                activeCanvasId = null;
 
+                // 2. ★修正：メタ情報の読み込み（キー名を統一）
                 if(content.meta) {
-                    if(content.meta.date) document.getElementById('eventDate').value = content.meta.date;
-                    if(content.meta.name) document.getElementById('eventName').value = content.meta.name;
-                    if(content.meta.place) document.getElementById('eventPlace').value = content.meta.place;
+                    document.getElementById('eventDate').value = content.meta.date || "";
+                    // saveToAutoSaveに合わせて 'title' を優先的に探す（古い 'name' も一応サポート）
+                    document.getElementById('eventName').value = content.meta.title || content.meta.name || "";
+                    document.getElementById('eventPlace').value = content.meta.place || "";
                 }
-                if(content.canvases && content.canvases.length > 0) {
-                    importData(content.canvases);
+
+                // 3. ★修正：データ本体の読み込み（キー名を統一）
+                // saveToAutoSaveに合わせて 'data' を探す（古い 'canvases' も一応サポート）
+                const dataToImport = content.data || content.canvases;
+
+                if(dataToImport && dataToImport.length > 0) {
+                    importData(dataToImport);
                 } else {
                     addNewCanvasBlock('メイン図面');
                 }
+                
                 hasUnsavedChanges = false;
+                alert("復元しました！");
+
             } catch(e) {
-                console.error('復元エラー:', e); alert('データの復元に失敗しました。');
+                console.error('復元エラー:', e); 
+                alert('データの復元に失敗しました。');
             }
         }
 
@@ -2021,15 +2048,35 @@
         }
         function ungroupObjects(){ const c=getActiveCanvas(); if(c&&c.getActiveObject()&&c.getActiveObject().type==='group') { c.getActiveObject().toActiveSelection(); c.requestRenderAll(); saveHistory(activeCanvasId); } }
         function restoreBackgroundState(cvs) { cvs.getObjects().forEach(o=>{ if(o.isBackground){ o.set({selectable:false,evented:false}); cvs.sendToBack(o); } }); cvs.requestRenderAll(); updateLayerButtonStates(); }
+        
         function saveAllJSON() { 
-            const dataToSave = canvasList.map(c => { return { title: '', height: c.heightState, isMeetingSheet: c.isMeetingSheet || false, json: c.canvasObj.toJSON(PROPERTIES_TO_INCLUDE) }; }); 
+            // 1. まずキャンバスのデータをまとめる
+            const canvasDataArray = canvasList.map(c => { 
+                return { 
+                    title: '', 
+                    height: c.heightState, 
+                    isMeetingSheet: c.isMeetingSheet || false, 
+                    json: c.canvasObj.toJSON(PROPERTIES_TO_INCLUDE) 
+                }; 
+            }); 
             
-            // ▼▼▼ 変更点: ファイル名生成ロジック ▼▼▼
+            // 2. 画面の入力欄から情報を取得
             const d = document.getElementById('eventDate').value; 
             const n = document.getElementById('eventName').value.trim(); 
             const p = document.getElementById('eventPlace').value.trim();
 
-            // あるものだけをアンダースコアで繋ぐ
+            // 3. ★ここが変更点！データ構造を「メタ情報＋キャンバスデータ」にする
+            const dataToSave = {
+                version: "3.2", // 将来のためにバージョンをつけておく
+                meta: {
+                    date: d,
+                    title: n,
+                    place: p
+                },
+                data: canvasDataArray // ここにさっきのキャンバスデータを入れる
+            };
+
+            // --- ファイル名生成（今のコードのまま活用） ---
             const nameParts = [];
             if(d) nameParts.push(d);
             if(n) nameParts.push(n);
@@ -2037,13 +2084,103 @@
 
             const baseName = nameParts.length > 0 ? nameParts.join("_") : "stage_plan";
             const fn = `${baseName}.json`;
-            // ▲▲▲ 変更ここまで ▲▲▲
 
-            const blob = new Blob([JSON.stringify(dataToSave)], {type: "application/json"}); 
-            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fn; document.body.appendChild(a); a.click(); document.body.removeChild(a); 
+            // 4. 保存実行
+            const blob = new Blob([JSON.stringify(dataToSave, null, 2)], {type: "application/json"}); 
+            const a = document.createElement("a"); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = fn; 
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a); 
         }
-        function loadJSON(input) { const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ const content = JSON.parse(e.target.result); canvasList.forEach(c => { c.canvasObj.dispose(); c.blockElement.remove(); }); canvasList = []; activeCanvasId = null; if(!Array.isArray(content) || (content.objects && !content[0].json)) { const oldData = Array.isArray(content) ? content : [ { title: 'Imported', height: 500, json: content } ]; importData(oldData); } else { importData(content); } }; r.readAsText(f); input.value=''; }
-        function importData(dataArray) { dataArray.forEach(d => { let h = d.height || 500; if(d.isMeetingSheet) { addMeetingCanvasBlock(); } else { addNewCanvasBlock(); } const lastId = canvasList[canvasList.length-1].id; const lastData = canvasList[canvasList.length-1]; lastData.canvasObj.loadFromJSON(d.json, () => { setCanvasHeight(lastId, h); if(!d.isMeetingSheet) restoreBackgroundState(lastData.canvasObj); lastData.history = [JSON.stringify(lastData.canvasObj.toJSON(PROPERTIES_TO_INCLUDE))]; lastData.historyStep = 0; markUnsaved(); }); }); }
+
+        function loadJSON(input) { 
+            const f = input.files[0]; 
+            if(!f) return; 
+            
+            const r = new FileReader(); 
+            r.onload = e => { 
+                try {
+                    const content = JSON.parse(e.target.result); 
+                    
+                    // 1. 既存のキャンバスを全消去
+                    canvasList.forEach(c => { 
+                        c.canvasObj.dispose(); 
+                        c.blockElement.remove(); 
+                    }); 
+                    canvasList = []; 
+                    activeCanvasId = null; 
+
+                    let dataToImport = content;
+
+                    // 2. ★追加：新しい形式（meta情報あり）かチェック
+                    if (content.meta && content.data) {
+                        // 文字情報を復元
+                        document.getElementById('eventDate').value = content.meta.date || "";
+                        document.getElementById('eventName').value = content.meta.title || ""; // keyはsaveに合わせて'title'
+                        document.getElementById('eventPlace').value = content.meta.place || "";
+                        
+                        // キャンバスデータ本体を取り出す
+                        dataToImport = content.data;
+                    } else {
+                        // 古い形式なら入力欄は空にしておく（前のデータが残らないように）
+                        document.getElementById('eventDate').value = "";
+                        document.getElementById('eventName').value = "";
+                        document.getElementById('eventPlace').value = "";
+                    }
+
+                    // 3. データの形式に合わせて importData に渡す（元のロジックを維持）
+                    if(!Array.isArray(dataToImport) || (dataToImport.objects && !dataToImport[0].json)) { 
+                        // 配列じゃない、またはFabric.jsの生データっぽい場合の救済措置
+                        const oldData = Array.isArray(dataToImport) ? dataToImport : [ { title: 'Imported', height: 500, json: dataToImport } ]; 
+                        importData(oldData); 
+                    } else { 
+                        // 通常の配列データ
+                        importData(dataToImport); 
+                    }
+                } catch(err) {
+                    console.error("JSON読込エラー:", err);
+                    alert("ファイルの読み込みに失敗しました。");
+                }
+            }; 
+            r.readAsText(f); 
+            input.value = ''; 
+        }
+
+        function importData(arr) {
+            if (!Array.isArray(arr)) return;
+
+            arr.forEach(data => {
+                // 1. データに合わせて「箱（キャンバス）」を作る
+                if (data.isMeetingSheet) {
+                    addMeetingCanvasBlock(); // 打合せ表を作成
+                } else {
+                    addNewCanvasBlock(); // 普通の図面を作成
+                }
+
+                // 今作ったばかりのキャンバスを取得
+                const currentData = canvasList[canvasList.length - 1];
+                const cvs = currentData.canvasObj;
+
+                // 2. 保存されていた絵（JSON）を復元する
+                // ※オブジェクトとして保存されているのでそのまま渡す
+                cvs.loadFromJSON(data.json, function() {
+                    cvs.requestRenderAll();
+                    saveHistory(currentData.id);
+                });
+
+                // 3. ★ここが修正点！
+                // 「打合せ表以外」の時だけ、高さを復元する（打合せ表は固定サイズだから不要）
+                if (!data.isMeetingSheet && data.height) {
+                    // もし setCanvasHeight 関数がボタンのDOM要素を必要とする作りなら、
+                    // ここで第3引数にnullを渡すか、関数側でガードする必要があるけど、
+                    // たぶんこれだけで大丈夫なはず！
+                    setCanvasHeight(currentData.id, data.height);
+                }
+            });
+        }
+        
         function saveCombinedPDF() { 
             const { jsPDF } = window.jspdf; 
             const targets = canvasList.filter(c => { const chk = document.getElementById('chk_' + c.id); return chk && chk.checked; }); 
