@@ -519,19 +519,21 @@
     <div id="helpModal" class="modal-overlay" onclick="if(event.target === this) toggleHelpModal()" style="display:none;">
         <div class="modal-content">
             <span class="close-btn" onclick="toggleHelpModal()">×</span>
-            <h2>🛠️ ヒント ＆ ショートカット</h2>
             
-            <h3>🖱️ 操作のヒント</h3>
+            <h3>🖱️ 機能説明</h3>
             <ul>
-                <li><strong>保存・読込：</strong> JSONファイルでのプロジェクト保存。</li>
-                <li><strong>自動保存：</strong> 30秒毎にローカル自動保存（上書き）。操作がない場合は休止。</li>
-                <li><strong>再開：</strong> 自動保存の読込。うっかりブラウザ閉じた時などに。起動後30秒以内！</li>
-                <li><strong>書出し：</strong> JPG：各キャンバスを縦に連結し一枚の画像で書出します。
-                <br>　　　　PDF：１キャンバス１ページで書出します。
-                <br>　　　　キャンバスの ☑️ 書出 チェックを外すと書出しから除外されます。</li>
-                <li><strong>日付・イベント名・場所：</strong> 入力してあるとファイル名に反映されます。</li>
-                <li><strong>打刻：</strong> 日付・イベント名・場所をキャンバスに配置。</li>
-                <li><strong>レイヤーモード：</strong> レイヤー編集モードに切り替え。レイヤー？</li>            
+                <li><strong>保存・読込：</strong> JSONファイルで保存・読込みを行います。</li>
+                <li><strong>自動保存：</strong> 「保存」とは別に、ブラウザ内に30秒ごとの自動保存機能があります。
+                            常に最新の状態が上書きされ、ファイルがどんどん増えることはありません。
+                            保存時は画面右下にメッセージが表示されます。（編集がない場合は休止）</li>
+                <li><strong>再開：</strong> 自動保存の読込。うっかりブラウザを閉じた時などに。起動後30秒以内！</li>
+                <li><strong>JPG：</strong> 各キャンバスを縦に連結した一枚のJPG画像として書出します。</li>
+                <li><strong>PDF：</strong>１キャンバス１ページでPDFとして書出します。</li>
+                <li><strong>☑️ 書出：</strong> キャンバス上のチェックを外すと書出しから除外されます。</li>
+                <li><strong>日付・イベント名・場所：</strong> 入力があるとファイル名に反映されます。<br>
+                            「打刻」を押すと、選択中のキャンバス左下に入力内容を配置します。</li>
+                <li><strong>レイヤーモード：</strong> レイヤーを編集するモードです。編集中は下の図面がロックされます。
+                            通常モードに戻るとレイヤー側がロックされます。レイヤーはキャンバス前面１枚のみ。ON・OFFで表示切替可。</li>            
             </ul>
 
             <h3>⌨️ ショートカットキー</h3>
@@ -540,8 +542,7 @@
                 <tr><td>Ctrl + V</td><td>ペースト（コピー元の右隣）</td></tr>
                 <tr><td>Ctrl + Z</td><td>元に戻す</td></tr>
                 <tr><td>Ctrl + Y</td><td>やり直す</td></tr>
-                <tr><td>Ctrl + G</td><td>グループ化</td></tr>
-                <tr><td>Ctrl + Shift + G</td><td>グループ解除</td></tr>
+                <tr><td>Ctrl + G</td><td>グループ化（+ Shift：解除）</td></tr>
                 <tr><td>Delete / BS</td><td>削除</td></tr>
                 <tr><td>矢印キー</td><td>1px 移動（+ Shift：10px 移動）</td></tr>
                 <tr><td>Shift + 移動</td><td>水平・垂直に固定</td></tr>
@@ -2180,7 +2181,7 @@
                 }
             });
         }
-        
+
         function saveCombinedPDF() { 
             const { jsPDF } = window.jspdf; 
             const targets = canvasList.filter(c => { const chk = document.getElementById('chk_' + c.id); return chk && chk.checked; }); 
