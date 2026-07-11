@@ -257,7 +257,7 @@
 <body>
 
     <header>
-        <div class="title">🎨 舞台図面エディター Ver3.3</div>
+        <div class="title">🎨 舞台図面エディター Ver3.4</div>
         <div class="input-group"><label>📅</label><input type="date" id="eventDate"></div>
         <div class="input-group"><label>🏷️</label><input type="text" id="eventName" placeholder="イベント名"></div>
         <div class="input-group"><label>📍</label><input type="text" id="eventPlace" placeholder="場所"></div>
@@ -272,6 +272,11 @@
             <button onclick="document.getElementById('jsonInput').click()">読込</button>
             <button onclick="loadFromAutoSave()" class="btn-resume" title="前回の作業内容を復元">📂 再開</button>
             <input type="file" id="jsonInput" accept=".json" onchange="loadJSON(this)" style="display:none">
+        </div>
+        <div class="toolbar-group" id="notionGroup" style="display:none;">
+            <span class="group-label">Notion</span>
+            <button onclick="notionSave()" class="btn-blue" id="notionSaveBtn">☁️ Notionに保存</button>
+            <span id="notionStatus" style="font-size:10px; color:#455a64; white-space:nowrap;"></span>
         </div>
         <div class="toolbar-group">
             <span class="group-label">書出し</span>
@@ -2641,6 +2646,175 @@
             }
         });
         
+        // ================================================================
+        // ===== Notion連携 (Cloudflare Worker経由で図面を読み書き) =====
+        // ================================================================
+
+        // Worker のURL (末尾スラッシュなし)
+        const NOTION_WORKER_URL = "https://stage-editor-relay.stsplaza-butai.workers.dev";
+        // WorkerにAPP_KEYを設定した場合、ここに同じ合言葉を入れる (未設定なら空のまま)
+        const NOTION_APP_KEY = "";
+
+        // URLの ?id=MORI-970 から催事IDを取得
+        const notionEventId = new URLSearchParams(location.search).get('id');
+
+        // 既存のonloadを保持しつつ、Notionモードの初期化を追加
+        const _prevOnload = window.onload;
+        window.onload = function() {
+            if (_prevOnload) _prevOnload();
+            if (notionEventId) {
+                document.getElementById('notionGroup').style.display = 'flex';
+                notionLoad();
+            }
+        };
+
+        function notionHeaders() {
+            return NOTION_APP_KEY ? { 'X-App-Key': NOTION_APP_KEY } : {};
+        }
+
+        function setNotionStatus(msg, isOk) {
+            const el = document.getElementById('notionStatus');
+            if (el) {
+                el.textContent = msg;
+                el.style.color = isOk ? '#2e7d32' : '#455a64';
+            }
+        }
+
+        // --- 読み込み: Notionの「図面データ」プロパティから図面を復元 ---
+        async function notionLoad() {
+            setNotionStatus('⏳ Notionから読込中…');
+            try {
+                const res = await fetch(
+                    `${NOTION_WORKER_URL}/load?id=${encodeURIComponent(notionEventId)}`,
+                    { headers: notionHeaders() }
+                );
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+                if (data.drawing) {
+                    applyLoadedContent(data.drawing);
+                    setNotionStatus('✅ 図面を読み込みました', true);
+                } else {
+                    setNotionStatus('🆕 新規図面 (保存でNotionに登録)', true);
+                }
+            } catch (e) {
+                console.error('Notion読込エラー:', e);
+                setNotionStatus('❌ 読込失敗');
+                alert('Notionからの図面読み込みに失敗しました。\n' + e.message);
+            }
+        }
+
+        // loadJSONと同じ復元処理 (confirmなし・ファイル入力なし版)
+        function applyLoadedContent(content) {
+            canvasList.forEach(c => {
+                c.canvasObj.dispose();
+                c.blockElement.remove();
+            });
+            canvasList = [];
+            activeCanvasId = null;
+
+            let dataToImport = content;
+            if (content.meta && content.data) {
+                document.getElementById('eventDate').value = content.meta.date || "";
+                document.getElementById('eventName').value = content.meta.title || "";
+                document.getElementById('eventPlace').value = content.meta.place || "";
+                dataToImport = content.data;
+            }
+
+            if (!Array.isArray(dataToImport)) {
+                importData([{ title: 'Imported', height: 500, json: dataToImport }]);
+            } else {
+                importData(dataToImport);
+            }
+            hasUnsavedChanges = false;
+        }
+
+        // 全キャンバスを縦に連結したPNGを生成 (saveCombinedJPGの全キャンバス版)
+        function buildCombinedPngDataURL() {
+            const targets = canvasList;
+            if (targets.length === 0) return Promise.resolve(null);
+
+            const GAP = 30;
+            let totalH = 0;
+            targets.forEach(c => totalH += c.heightState);
+            if (targets.length > 1) totalH += (targets.length - 1) * GAP;
+
+            const w = BASE_WIDTH;
+            const comboCanvas = document.createElement('canvas');
+            comboCanvas.width = w;
+            comboCanvas.height = totalH;
+            const ctx = comboCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, totalH);
+
+            const promises = targets.map(c => new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => resolve({ img, h: c.heightState });
+                const targetMultiplier = 1.0 / c.canvasObj.getZoom();
+                img.src = c.canvasObj.toDataURL({ format: 'png', multiplier: targetMultiplier });
+            }));
+
+            return Promise.all(promises).then(images => {
+                let y = 0;
+                images.forEach(item => {
+                    ctx.drawImage(item.img, 0, y, w, item.h);
+                    y += item.h + GAP;
+                });
+                return comboCanvas.toDataURL('image/png');
+            });
+        }
+
+        // --- 保存: 図面JSON+プレビューPNGをNotionへ ---
+        async function notionSave() {
+            if (!notionEventId) {
+                alert('URLに催事ID (?id=〇〇) が付いていないため、Notionに保存できません。');
+                return;
+            }
+            const btn = document.getElementById('notionSaveBtn');
+            btn.disabled = true;
+            setNotionStatus('⏳ 保存中…');
+
+            try {
+                // saveAllJSONと同じデータ構造で組み立てる
+                const dataToSave = {
+                    version: "3.2",
+                    meta: {
+                        date: document.getElementById('eventDate').value,
+                        title: document.getElementById('eventName').value.trim(),
+                        place: document.getElementById('eventPlace').value.trim()
+                    },
+                    data: canvasList.map(c => ({
+                        title: '',
+                        height: c.heightState,
+                        isMeetingSheet: c.isMeetingSheet || false,
+                        json: c.canvasObj.toJSON(PROPERTIES_TO_INCLUDE)
+                    }))
+                };
+
+                const png = await buildCombinedPngDataURL();
+
+                const res = await fetch(
+                    `${NOTION_WORKER_URL}/save?id=${encodeURIComponent(notionEventId)}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...notionHeaders() },
+                        body: JSON.stringify({ drawing: dataToSave, png: png })
+                    }
+                );
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+
+                hasUnsavedChanges = false;
+                setNotionStatus('✅ 保存しました ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}), true);
+            } catch (e) {
+                console.error('Notion保存エラー:', e);
+                setNotionStatus('❌ 保存失敗');
+                alert('Notionへの保存に失敗しました。\n' + e.message + '\n\n念のため「ファイル(JSON) → 保存」でローカルにも保存しておいてください。');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
     </script>
 </body>
 </html>
