@@ -528,6 +528,7 @@
         </div>
         <div id="sheetPage">
             <div class="sh-head">
+                <div class="sh-brand">舞台打合せ表</div>
                 <div class="frow" style="flex-shrink:0; margin-bottom:0;"><label style="width:auto;">利用日</label><input type="date" id="eventDate" class="sf sh-big" style="width:128px;"></div>
                 <div class="frow" style="flex:1; margin-bottom:0;"><label style="width:auto;">主催者名</label><input id="sf_org" class="sf sh-big" style="flex:1;"><span class="sh-sama">様</span></div>
                 <div class="frow" style="flex:1.25; margin-bottom:0;"><label style="width:auto;">催事名</label><input id="eventName" class="sf sh-big" style="flex:1;"></div>
@@ -535,12 +536,11 @@
                     <div class="frow"><label>会場</label><input id="eventPlace" class="sf" style="width:148px;"></div>
                     <div class="frow"><label>担当</label><input id="sf_tantou" class="sf" style="width:148px;"></div>
                 </div>
-                <div class="sh-brand">舞台打合せ表</div>
             </div>
             <div class="sh-grid">
                 <div class="sh-col sh-col-left">
                     <div class="sh-sec" style="--sec:#23425f;">
-                        <h4>借用区分・タイムテーブル</h4>
+                        <h4>タイムテーブル・借用区分</h4>
                         <table class="kgtt">
                             <thead><tr><th class="c-k">区</th><th class="c-h">時</th><th>内容</th><th class="c-r">ホ</th><th class="c-r">多</th><th class="c-r">A</th><th class="c-r">B</th><th class="c-r">C</th><th class="c-r">D</th></tr></thead>
                             <tbody id="kgttBody"></tbody>
@@ -3097,7 +3097,8 @@
                     switchView('sheet');
                     await new Promise(r => setTimeout(r, 350));
                     const cv = await html2canvas(document.getElementById('sheetPage'), {
-                        scale: 1.3, backgroundColor: '#ffffff', logging: false
+                        scale: 1.3, backgroundColor: '#ffffff', logging: false,
+                        onclone: (doc) => prepareCaptureClone(doc)
                     });
                     return cv.toDataURL('image/png');
                 } catch (e) {
@@ -3105,6 +3106,53 @@
                 }
             }
             return buildCombinedPngDataURL();
+        }
+
+        // 撮影用クローンの加工:
+        // ・凡例などの編集用UI (.no-print) を画像から除外
+        // ・入力部品を静的テキストに置換 (html2canvasのtextarea文字ズレバグ対策)
+        function prepareCaptureClone(doc) {
+            const sheet = doc.getElementById('sheetPage');
+            if (!sheet) return;
+            sheet.querySelectorAll('.no-print').forEach(el => el.remove());
+
+            const srcFields = document.querySelectorAll('#sheetPage textarea, #sheetPage input, #sheetPage select');
+            const cloneFields = sheet.querySelectorAll('textarea, input, select');
+            cloneFields.forEach((el, i) => {
+                const src = srcFields[i];
+                if (!src) return;
+                if (src.type === 'checkbox') {
+                    if (src.checked) el.setAttribute('checked', '');
+                    return;
+                }
+                let text = src.value || '';
+                if (src.tagName === 'SELECT') text = (src.options[src.selectedIndex] || {}).text || '';
+                if (src.type === 'date' && text) text = text.split('-').join('/');
+
+                const cs = getComputedStyle(src);
+                const div = doc.createElement('div');
+                div.textContent = text;
+                div.style.boxSizing = 'border-box';
+                div.style.width = src.offsetWidth + 'px';
+                div.style.minHeight = src.offsetHeight + 'px';
+                div.style.padding = cs.padding;
+                div.style.fontSize = cs.fontSize;
+                div.style.fontWeight = cs.fontWeight;
+                div.style.fontFamily = cs.fontFamily;
+                div.style.lineHeight = cs.lineHeight;
+                div.style.color = cs.color;
+                div.style.textAlign = cs.textAlign;
+                div.style.whiteSpace = 'pre-wrap';
+                div.style.wordBreak = 'break-all';
+                if (src.tagName === 'TEXTAREA') {
+                    div.style.border = cs.border;
+                    div.style.borderRadius = cs.borderRadius;
+                    div.style.background = cs.backgroundColor;
+                } else {
+                    div.style.borderBottom = cs.borderBottom;
+                }
+                el.replaceWith(div);
+            });
         }
 
         // ================================================================
