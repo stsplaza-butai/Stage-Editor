@@ -512,7 +512,6 @@
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集</button>
         </div>
         <span style="flex:1"></span>
-        <button class="btn-stamp" onclick="toggleHelpModal()">❓ ヘルプ</button>
     </header>
 
     <!-- ============ 打合せ表ビュー ============ -->
@@ -644,7 +643,10 @@
             <span class="group-label">履歴</span>
             <button onclick="undo()" title="Ctrl + Z">↩️ 戻す</button>
             <button onclick="redo()" title="Ctrl + Y">↪️ やり直す</button>
+        </div>
+        <div class="toolbar-group">
             <button onclick="addStamp()" title="日付・主催者・催事名を図面に刻印">📝 打刻</button>
+            <button onclick="toggleHelpModal()">❓ ヘルプ</button>
         </div>
         <div class="toolbar-group">
             <span class="group-label">グループ</span>
@@ -3051,9 +3053,24 @@
         }
 
         // --- 印刷 ---
+        // Notion埋め込み(iframe)内ではwindow.print()がブロックされるため、
+        // 同じURLに &print=1 を付けて新しいタブで開き、そちらで自動印刷する
         function printSheet() {
+            if (window.self !== window.top) {
+                const url = location.href + (location.search ? '&' : '?') + 'print=1';
+                window.open(url, '_blank');
+                return;
+            }
             switchView('sheet');
             setTimeout(() => window.print(), 150);
+        }
+
+        // ?print=1 付きで開かれた場合、読み込み完了後に自動で印刷ダイアログを開く
+        const wantAutoPrint = new URLSearchParams(location.search).get('print') === '1';
+        function autoPrintIfRequested() {
+            if (!wantAutoPrint) return;
+            switchView('sheet');
+            setTimeout(() => window.print(), 500);
         }
 
         // --- Notionプロパティの反映 (催事名などはNotionが正) ---
@@ -3173,6 +3190,8 @@
                 document.getElementById('notionGroup').style.display = 'flex';
                 document.querySelectorAll('.notion-only').forEach(el => el.style.display = '');
                 notionLoad();
+            } else {
+                autoPrintIfRequested();
             }
         };
 
@@ -3211,6 +3230,7 @@
                 }
                 // Notionのプロパティ値を最後に反映 (催事名などはNotionが正)
                 if (data.props) applyNotionProps(data.props);
+                autoPrintIfRequested();
             } catch (e) {
                 console.error('Notion読込エラー:', e);
                 setNotionStatus('❌ 読込失敗');
