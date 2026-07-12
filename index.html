@@ -281,7 +281,7 @@
         #sheetPage {
             width: 1123px; min-height: 794px; margin: 0 auto;
             background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.35);
-            padding: 22px 26px 16px; box-sizing: border-box;
+            padding: 12px 14px 10px; box-sizing: border-box;
             display: flex; flex-direction: column;
             font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
             color: #1c2733;
@@ -303,8 +303,8 @@
 
         /* ヘッダー帯 */
         .sh-head {
-            display: flex; align-items: flex-end; gap: 20px;
-            border-bottom: 2.5px solid #23425f; padding-bottom: 8px; margin-bottom: 10px;
+            display: flex; align-items: flex-end; gap: 14px;
+            border-bottom: 2.5px solid #23425f; padding-bottom: 5px; margin-bottom: 7px;
         }
         .sh-head-l { flex: 1; min-width: 0; }
         .sh-venue { font-size: 11px; color: #5a6b7c; width: 60%; letter-spacing: .08em; }
@@ -321,26 +321,26 @@
             letter-spacing: .3em; text-align: center;
         }
 
-        /* 3カラムグリッド */
+        /* 3カラムグリッド → 左カラム＋部署バンドの2カラム */
         .sh-grid {
             flex: 1; min-height: 0;
-            display: grid; grid-template-columns: 250px 1fr 370px; gap: 16px;
+            display: grid; grid-template-columns: 340px 1fr; gap: 10px;
         }
         .sh-col { min-width: 0; display: flex; flex-direction: column; }
         .sh-col-right { min-height: 0; }
-        .sh-sec { margin-bottom: 9px; }
-        .sh-sec h4 {
-            margin: 0 0 4px; font-size: 10px; font-weight: bold; letter-spacing: .18em;
-            color: #fff; background: var(--sec, #23425f);
-            display: inline-block; padding: 2px 12px 2px 10px; border-radius: 2px;
+        .sh-sec { margin-bottom: 6px; }
+        .sh-sec h4, .band h4 {
+            margin: 0 0 3px; font-size: 9.5px; font-weight: bold; letter-spacing: .18em;
+            color: var(--sectext, #fff); background: var(--sec, #23425f);
+            display: inline-block; padding: 1px 10px 1px 8px; border-radius: 2px;
         }
         .sh-sec-draw { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
         /* ラベル＋入力の行 */
-        .frow { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 11px; }
+        .frow { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: 11px; }
         .frow label {
-            width: 88px; flex-shrink: 0; text-align: right;
-            font-size: 10px; color: #5a6b7c;
+            width: 80px; flex-shrink: 0; text-align: right;
+            font-size: 9.5px; color: #5a6b7c;
         }
         .frow .sf { flex: 1; }
         .chk-label { font-size: 10px; color: #5a6b7c; cursor: pointer; white-space: nowrap; }
@@ -407,6 +407,41 @@
         }
         .prop-chip.warn { border-color: #d97706; color: #a05408; background: #fff8ee; font-weight: 600; }
 
+        /* 借用区分グリッド */
+        .kg { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .kg th, .kg td { border: 1px solid #dfe4ea; font-size: 9px; text-align: center; padding: 1px 0; }
+        .kg thead th { background: #eef2f6; color: #5a6b7c; font-weight: 600; }
+        .kg .kg-room { background: #eef2f6; color: #3c4c5c; font-weight: 600; width: 62px; }
+        .kg-cell { cursor: pointer; height: 15px; user-select: none; color: #1c2733; }
+        .kg-cell:hover { outline: 1.5px solid #1a73e8; outline-offset: -1px; }
+        .kg-cell.s1 { background: #c8e6c9; }
+        .kg-cell.s2 { background: #ffcdd2; font-weight: bold; }
+        .kg-legend { font-size: 9px; color: #97a3ae; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+        .kg-legend .kg-cell { display: inline-block; width: 16px; height: 13px; line-height: 13px; border: 1px solid #dfe4ea; }
+
+        /* 左カラムの伸縮 */
+        .sh-col-left { display: flex; flex-direction: column; min-height: 0; }
+        .sh-sec-grow { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .sh-ta-grow { flex: 1; min-height: 34px; }
+
+        /* 部署バンド (コメント欄｜図面) */
+        .sh-col-bands { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+        .band {
+            flex: 1; min-height: 0; display: flex; flex-direction: column;
+            border: 1px solid #e4e8ee; border-left: 3px solid var(--sec, #23425f);
+            border-radius: 4px; padding: 4px 7px 6px; background: #fff;
+        }
+        .band-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 318px; gap: 8px; }
+        .band-fields { min-width: 0; display: flex; flex-direction: column; }
+        .band-ta { flex: 1; min-height: 30px; margin-top: 2px; }
+        .band-thumb { min-height: 0; position: relative; }
+        .band-thumb .draw-slot { height: 100%; box-sizing: border-box; }
+        .band-thumb .draw-slot img { width: 100%; height: 100%; object-fit: contain; }
+        .band-thumb .ds-empty {
+            height: 100%; box-sizing: border-box; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+
         /* ============ 印刷 ============ */
         @media print {
             @page { size: A4 landscape; margin: 6mm; }
@@ -421,7 +456,7 @@
             .sf::placeholder { color: transparent !important; }
             .sf:focus { background: transparent; }
             #sheetDrawings { overflow: hidden; }
-            .draw-slot { break-inside: avoid; }
+            .draw-slot, .band { break-inside: avoid; }
             .draw-slot:hover { border-color: #dfe4ea; box-shadow: none; }
             .tt td.tt-td-ops { display: none; }
         }
@@ -462,17 +497,17 @@
                 </div>
                 <div class="sh-head-r">
                     <div class="frow"><label>利用日</label><input type="date" id="eventDate" class="sf" style="width:130px;"></div>
-                    <div class="frow"><label>区分</label><span class="kubun-chips">
-                        <button type="button" class="kubun-chip" data-k="午前" onclick="this.classList.toggle('on');markUnsaved();">午前</button>
-                        <button type="button" class="kubun-chip" data-k="午後" onclick="this.classList.toggle('on');markUnsaved();">午後</button>
-                        <button type="button" class="kubun-chip" data-k="夜間" onclick="this.classList.toggle('on');markUnsaved();">夜間</button>
-                    </span></div>
                     <div class="frow"><label>担当</label><input id="sf_tantou" class="sf" style="width:110px;"></div>
                 </div>
                 <div class="sh-brand">舞台<br>打合せ表</div>
             </div>
             <div class="sh-grid">
-                <div class="sh-col">
+                <div class="sh-col sh-col-left">
+                    <div class="sh-sec" style="--sec:#23425f;">
+                        <h4>借用区分</h4>
+                        <table class="kg"><thead><tr><th></th><th>前延長</th><th>午前</th><th>午後</th><th>夜間</th></tr></thead><tbody id="kgBody"></tbody></table>
+                        <div class="kg-legend no-print"><span class="kg-cell s1" style="cursor:default;">通</span> 通常　<span class="kg-cell s2" style="cursor:default;">倍</span> 倍額　— セルをクリックで切替</div>
+                    </div>
                     <div class="sh-sec" style="--sec:#23425f;">
                         <h4>タイムテーブル</h4>
                         <table class="tt"><tbody id="ttBody"></tbody></table>
@@ -483,7 +518,7 @@
                     </div>
                     <div class="sh-sec" style="--sec:#23425f;">
                         <h4>搬入</h4>
-                        <textarea id="sf_hannyu" class="sf" rows="3" placeholder="時間・車両・搬入口など"></textarea>
+                        <textarea id="sf_hannyu" class="sf" rows="2" placeholder="時間・車両・搬入口など"></textarea>
                     </div>
                     <div class="sh-sec" style="--sec:#23425f;">
                         <h4>基本情報</h4>
@@ -491,51 +526,60 @@
                         <div class="frow"><label>客席の形状</label><select id="sf_seat" class="sf"><option value=""></option><option>シアター</option><option>平土間</option><option>スクール</option><option>その他</option></select></div>
                         <div class="frow"><label>舞台の形状</label><input id="sf_stageShape" class="sf" placeholder="反響板・スクリーン等"></div>
                         <div class="frow"><label>出演者数</label><input id="sf_performers" class="sf"><label style="width:auto;">入場者数</label><input id="sf_audience" class="sf"></div>
+                        <div class="frow"><label>ピアノ</label><input id="sf_piano" class="sf" placeholder="使用・調律の有無など"></div>
                     </div>
-                </div>
-                <div class="sh-col">
-                    <div class="sh-sec" style="--sec:#3b5b92;">
-                        <h4>舞台</h4>
-                        <div class="frow"><label>緞帳</label><input id="sf_donchou" class="sf"></div>
-                        <div class="frow"><label>横看板・懸垂・旗</label><input id="sf_kanban" class="sf"></div>
-                        <div class="frow"><label>幕</label><input id="sf_maku" class="sf"></div>
-                        <div class="frow"><label>吊り物</label><input id="sf_tsurimono" class="sf"></div>
-                        <div class="frow"><label>ひな壇</label><input id="sf_hinadan" class="sf"></div>
-                        <div class="frow"><label>ピアノ</label><input id="sf_piano" class="sf"></div>
-                        <textarea id="sf_stageNote" class="sf" rows="2" placeholder="舞台メモ"></textarea>
-                    </div>
-                    <div class="sh-sec" style="--sec:#b7791f;">
-                        <h4>照明</h4>
-                        <textarea id="sf_lighting" class="sf" rows="4" placeholder="明かりの内容・仕込み・オペなど"></textarea>
-                    </div>
-                    <div class="sh-sec" style="--sec:#2f855a;">
-                        <h4>音響</h4>
-                        <div class="frow"><label>マイク</label><input id="sf_mic" class="sf"></div>
-                        <div class="frow"><label>再生（叩き）</label><input id="sf_playback" class="sf"></div>
-                        <div class="frow"><label>音響対応</label><input id="sf_soundSupport" class="sf"></div>
-                        <textarea id="sf_soundNote" class="sf" rows="2" placeholder="音響メモ"></textarea>
-                    </div>
-                    <div class="sh-sec" style="--sec:#6b46c1;">
+                    <div class="sh-sec" style="--sec:#7c3aed;">
                         <h4>映像</h4>
                         <div class="frow"><label>プロジェクター</label><input id="sf_projector" class="sf"></div>
                         <div class="frow"><label>メモ</label><input id="sf_videoNote" class="sf"></div>
                     </div>
-                    <div class="sh-sec" style="--sec:#c05621;">
-                        <h4>表周り</h4>
+                    <div class="sh-sec" style="--sec:#2f855a;">
+                        <h4>表周り・その他</h4>
                         <div class="frow"><label>２階案内板</label><input id="sf_floor2" class="sf"></div>
                         <div class="frow"><label>空調</label><input id="sf_aircon" class="sf"></div>
                         <div class="frow"><label>ホワイエ</label><input id="sf_foyer" class="sf"></div>
                         <div class="frow"><label>メモ</label><input id="sf_omoteNote" class="sf"><label class="chk-label" style="width:auto;"><input type="checkbox" id="sf_chuui"> 注意事項説明済</label></div>
                     </div>
-                </div>
-                <div class="sh-col sh-col-right">
-                    <div class="sh-sec sh-sec-draw" style="--sec:#23425f;">
-                        <h4>図面</h4>
-                        <div id="sheetDrawings"></div>
-                    </div>
-                    <div class="sh-sec" style="--sec:#5a6b7c;">
+                    <div class="sh-sec sh-sec-grow" style="--sec:#2f855a;">
                         <h4>特記事項・備考</h4>
-                        <textarea id="sf_tokki" class="sf" rows="3"></textarea>
+                        <textarea id="sf_tokki" class="sf sh-ta-grow"></textarea>
+                    </div>
+                </div>
+                <div class="sh-col sh-col-bands">
+                    <div class="band" style="--sec:#e2711d;">
+                        <h4>舞台</h4>
+                        <div class="band-body">
+                            <div class="band-fields">
+                                <div class="frow"><label>緞帳</label><input id="sf_donchou" class="sf"></div>
+                                <div class="frow"><label>横看板・懸垂・旗</label><input id="sf_kanban" class="sf"></div>
+                                <div class="frow"><label>幕</label><input id="sf_maku" class="sf"></div>
+                                <div class="frow"><label>吊り物</label><input id="sf_tsurimono" class="sf"></div>
+                                <div class="frow"><label>ひな壇</label><input id="sf_hinadan" class="sf"></div>
+                                <textarea id="sf_stageNote" class="sf band-ta" placeholder="舞台メモ"></textarea>
+                            </div>
+                            <div class="band-thumb" id="bandThumb0"></div>
+                        </div>
+                    </div>
+                    <div class="band" style="--sec:#1a5fb4;">
+                        <h4>音響</h4>
+                        <div class="band-body">
+                            <div class="band-fields">
+                                <div class="frow"><label>マイク</label><input id="sf_mic" class="sf"></div>
+                                <div class="frow"><label>再生（叩き）</label><input id="sf_playback" class="sf"></div>
+                                <div class="frow"><label>音響対応</label><input id="sf_soundSupport" class="sf"></div>
+                                <textarea id="sf_soundNote" class="sf band-ta" placeholder="音響メモ"></textarea>
+                            </div>
+                            <div class="band-thumb" id="bandThumb1"></div>
+                        </div>
+                    </div>
+                    <div class="band" style="--sec:#c99700;">
+                        <h4>照明</h4>
+                        <div class="band-body">
+                            <div class="band-fields">
+                                <textarea id="sf_lighting" class="sf band-ta" placeholder="明かりの内容・仕込み・オペなど"></textarea>
+                            </div>
+                            <div class="band-thumb" id="bandThumb2"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -859,11 +903,16 @@
         const AUTO_SAVE_INTERVAL = 30000;
 
         window.onload = function() {
-            addNewCanvasBlock('メイン図面');
+            createDefaultCanvases();
             initMeetingSheet();
             switchView('sheet');
             setInterval(checkAndAutoSave, AUTO_SAVE_INTERVAL);
         };
+
+        function createDefaultCanvases() {
+            DEPT_NAMES.forEach(n => addNewCanvasBlock(n));
+            activateCanvas(canvasList[0].id);
+        }
 
         function checkAndAutoSave() {
             if (!hasUnsavedChanges || canvasList.length === 0) return;
@@ -923,7 +972,7 @@
                 if(dataToImport && dataToImport.length > 0) {
                     importData(dataToImport);
                 } else {
-                    addNewCanvasBlock('メイン図面');
+                    createDefaultCanvases();
                 }
                 
                 applyExtras(content);
@@ -964,7 +1013,7 @@
             block.innerHTML = `
                 <div class="block-header">
                     <div class="block-ctrl-group">
-                        <span class="block-label">図面エリア:</span>
+                        <span class="block-label">${title}</span>
                         <button class="btn-mini btn-size" onclick="setCanvasHeight('${id}', 500, this)">舞台</button>
                         <button class="btn-mini btn-size" onclick="setCanvasHeight('${id}', 1000, this)">＋客席前方</button>
                         <button class="btn-mini btn-size" onclick="setCanvasHeight('${id}', 1650, this)">＋客席後方</button>
@@ -989,6 +1038,7 @@
             const canvasData = {
                 id: id,
                 canvasObj: fCanvas,
+                title: title,
                 history: [],
                 historyStep: -1,
                 isHistoryLocked: false,
@@ -2216,10 +2266,10 @@
         function importData(arr) {
             if (!Array.isArray(arr)) return;
 
-            arr.forEach(data => {
+            arr.forEach((data, i) => {
                 // 1. データに合わせて「箱（キャンバス）」を作る
                 // (旧バージョンの「打合せ表」データも通常キャンバスとして復元する)
-                addNewCanvasBlock();
+                addNewCanvasBlock(data.title || DEPT_NAMES[i] || ('図面' + (i + 1)));
 
                 // 今作ったばかりのキャンバスを取得
                 const currentData = canvasList[canvasList.length - 1];
@@ -2713,14 +2763,71 @@
         ];
         const TT_STANDARD = ['搬入','仕込み・準備','リハーサル','開場','開演','終演','搬出','退館'];
 
+        const DEPT_NAMES = ['舞台図', '音響図', '照明図'];
+        const KG_ROOMS = ['ホール', '多目的室', '会議室A', '会議室B', '会議室C', '会議室D'];
+        const KG_COLS = 4; // 前延長・午前・午後・夜間
+
         function initMeetingSheet() {
             const place = document.getElementById('eventPlace');
             if (!place.value) place.value = 'くまもと森都心プラザ ホール';
+            buildKubunGrid();
             if (document.getElementById('ttBody').children.length === 0) {
                 populateTimetable(null);
             }
             // シート内のあらゆる入力を未保存フラグに繋ぐ
             document.getElementById('sheetPage').addEventListener('input', markUnsaved);
+        }
+
+        // --- 借用区分グリッド (クリックで 空欄→通常→倍額→空欄) ---
+        function buildKubunGrid() {
+            const tbody = document.getElementById('kgBody');
+            tbody.innerHTML = '';
+            KG_ROOMS.forEach(room => {
+                const tr = document.createElement('tr');
+                const th = document.createElement('td');
+                th.className = 'kg-room';
+                th.textContent = room;
+                tr.appendChild(th);
+                for (let c = 0; c < KG_COLS; c++) {
+                    const td = document.createElement('td');
+                    td.className = 'kg-cell';
+                    td.onclick = () => kgCycle(td);
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        function kgCycle(td) {
+            if (td.classList.contains('s2')) {
+                td.classList.remove('s2'); td.textContent = '';
+            } else if (td.classList.contains('s1')) {
+                td.classList.remove('s1'); td.classList.add('s2'); td.textContent = '倍額';
+            } else {
+                td.classList.add('s1'); td.textContent = '通常';
+            }
+            markUnsaved();
+        }
+
+        function collectKubunGrid() {
+            return [...document.querySelectorAll('#kgBody tr')].map(tr =>
+                [...tr.querySelectorAll('.kg-cell')].map(td =>
+                    td.classList.contains('s2') ? '倍額' : td.classList.contains('s1') ? '通常' : ''
+                )
+            );
+        }
+
+        function populateKubunGrid(grid) {
+            buildKubunGrid();
+            if (!grid) return;
+            [...document.querySelectorAll('#kgBody tr')].forEach((tr, r) => {
+                [...tr.querySelectorAll('.kg-cell')].forEach((td, c) => {
+                    const s = (grid[r] || [])[c] || '';
+                    td.classList.toggle('s1', s === '通常');
+                    td.classList.toggle('s2', s === '倍額');
+                    td.textContent = s;
+                });
+            });
         }
 
         function switchView(v) {
@@ -2788,7 +2895,7 @@
                 if (el) obj[id.replace('sf_', '')] = el.value;
             });
             obj.chuui = document.getElementById('sf_chuui').checked;
-            obj.kubun = [...document.querySelectorAll('.kubun-chip.on')].map(b => b.dataset.k);
+            obj.kubunGrid = collectKubunGrid();
             return obj;
         }
 
@@ -2799,10 +2906,7 @@
                 if (el) el.value = obj[id.replace('sf_', '')] || '';
             });
             document.getElementById('sf_chuui').checked = !!obj.chuui;
-            const kubun = obj.kubun || [];
-            document.querySelectorAll('.kubun-chip').forEach(b => {
-                b.classList.toggle('on', kubun.includes(b.dataset.k));
-            });
+            populateKubunGrid(obj.kubunGrid || null);
         }
 
         // --- 保存データの組み立て (JSONローカル保存・自動保存・Notion保存で共通) ---
@@ -2817,7 +2921,7 @@
                 sheet: collectSheet(),
                 timetable: collectTimetable(),
                 data: canvasList.map(c => ({
-                    title: '',
+                    title: c.title || '',
                     height: c.heightState,
                     json: c.canvasObj.toJSON(PROPERTIES_TO_INCLUDE)
                 }))
@@ -2832,34 +2936,44 @@
             setTimeout(refreshSheetThumbs, 800);
         }
 
-        // --- 図面サムネイル ---
+        // --- 図面サムネイル (部署バンドの右側に表示) ---
         function refreshSheetThumbs() {
-            const box = document.getElementById('sheetDrawings');
-            box.innerHTML = '';
-            if (canvasList.length === 0) {
-                const d = document.createElement('div');
-                d.className = 'ds-empty';
-                d.textContent = '＋ 図面を作成 (図面編集画面へ)';
-                d.onclick = () => switchView('draw');
-                box.appendChild(d);
-                return;
-            }
-            canvasList.forEach((c, i) => {
+            DEPT_NAMES.forEach((name, i) => {
+                const box = document.getElementById('bandThumb' + i);
+                if (!box) return;
+                box.innerHTML = '';
+                const c = canvasList[i];
+                if (!c) {
+                    const d = document.createElement('div');
+                    d.className = 'ds-empty';
+                    d.textContent = `＋ ${name}を描く`;
+                    d.onclick = () => createDeptCanvas(i);
+                    box.appendChild(d);
+                    return;
+                }
                 const slot = document.createElement('div');
                 slot.className = 'draw-slot';
                 slot.onclick = () => openDrawing(c.id);
                 const label = document.createElement('div');
                 label.className = 'ds-label';
-                label.textContent = `図面 ${i + 1}`;
+                label.textContent = name;
                 const img = document.createElement('img');
                 try {
-                    const mul = 0.55 / c.canvasObj.getZoom();
+                    const mul = 0.5 / c.canvasObj.getZoom();
                     img.src = c.canvasObj.toDataURL({ format: 'png', multiplier: mul });
                 } catch (e) { console.warn('サムネイル生成失敗:', e); }
                 slot.appendChild(img);
                 slot.appendChild(label);
                 box.appendChild(slot);
             });
+        }
+
+        // 部署の図面キャンバスが無ければ作ってから編集画面へ
+        function createDeptCanvas(i) {
+            while (canvasList.length <= i) {
+                addNewCanvasBlock(DEPT_NAMES[canvasList.length] || ('図面' + (canvasList.length + 1)));
+            }
+            openDrawing(canvasList[i].id);
         }
 
         function openDrawing(id) {
