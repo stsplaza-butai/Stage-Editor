@@ -303,9 +303,10 @@
 
         /* ヘッダー帯 */
         .sh-head {
-            display: flex; align-items: flex-end; gap: 14px;
-            border-bottom: 2.5px solid #23425f; padding-bottom: 5px; margin-bottom: 7px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 2.5px solid #23425f; padding-bottom: 4px; margin-bottom: 6px;
         }
+        .sh-big { font-size: 13px; font-weight: 600; }
         .sh-head-l { flex: 1; min-width: 0; }
         .sh-venue { font-size: 11px; color: #5a6b7c; width: 60%; letter-spacing: .08em; }
         .sh-title-row { display: flex; align-items: baseline; gap: 14px; margin-top: 3px; }
@@ -314,17 +315,17 @@
         .sh-org .sf { flex: 1; font-size: 13px; }
         .sh-sama { font-size: 11px; color: #5a6b7c; flex-shrink: 0; }
         .sh-head-r { flex-shrink: 0; }
-        .sh-head-r .frow { margin-bottom: 3px; }
+        .sh-head-r .frow { margin-bottom: 2px; }
         .sh-brand {
-            flex-shrink: 0; font-size: 15px; font-weight: bold; line-height: 1.35;
-            color: #23425f; border: 2px solid #23425f; padding: 6px 12px;
-            letter-spacing: .3em; text-align: center;
+            flex-shrink: 0; font-size: 12px; font-weight: bold; line-height: 1.2;
+            color: #23425f; border: 2px solid #23425f; padding: 4px 10px;
+            letter-spacing: .25em; text-align: center;
         }
 
         /* 3カラムグリッド → 左カラム＋部署バンドの2カラム */
         .sh-grid {
             flex: 1; min-height: 0;
-            display: grid; grid-template-columns: 340px 1fr; gap: 10px;
+            display: grid; grid-template-columns: 4fr 6fr; gap: 8px;
         }
         .sh-col { min-width: 0; display: flex; flex-direction: column; }
         .sh-col-right { min-height: 0; }
@@ -419,17 +420,29 @@
         .kg-legend { font-size: 9px; color: #97a3ae; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
         .kg-legend .kg-cell { display: inline-block; width: 16px; height: 13px; line-height: 13px; border: 1px solid #dfe4ea; }
 
+        /* 選択チップ (横断幕・懸垂・旗など) */
+        .chip-wrap { flex: 1; display: flex; flex-wrap: wrap; gap: 3px; min-width: 0; }
+        .sel-chip {
+            font-size: 9.5px; padding: 1px 8px; cursor: pointer;
+            border: 1px solid #c6cdd4; border-radius: 10px; background: #fff; color: #97a3ae;
+        }
+        .sel-chip.on { background: #e2711d; border-color: #e2711d; color: #fff; font-weight: bold; }
+
         /* 左カラムの伸縮 */
         .sh-col-left { display: flex; flex-direction: column; min-height: 0; }
         .sh-sec-grow { flex: 1; display: flex; flex-direction: column; min-height: 0; }
         .sh-ta-grow { flex: 1; min-height: 34px; }
 
         /* 部署バンド (コメント欄｜図面) */
-        .sh-col-bands { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+        .sh-col-bands { display: flex; flex-direction: column; gap: 0; min-height: 0; }
+        .band + .band { border-top: none; }
+        .band { border-radius: 0; }
+        .band:first-child { border-radius: 4px 4px 0 0; }
+        .band:last-child { border-radius: 0 0 4px 4px; }
         .band {
             flex: 1; min-height: 0; display: flex; flex-direction: column;
             border: 1px solid #e4e8ee; border-left: 3px solid var(--sec, #23425f);
-            border-radius: 4px; padding: 4px 7px 6px; background: #fff;
+            padding: 4px 7px 6px; background: #fff;
         }
         .band-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 318px; gap: 8px; }
         .band-fields { min-width: 0; display: flex; flex-direction: column; }
@@ -471,8 +484,7 @@
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集</button>
         </div>
         <span style="flex:1"></span>
-        <button class="btn-stamp" onclick="addStamp()">📝 打刻</button>
-        <button class="btn-stamp" onclick="toggleHelpModal()" style="margin-left:5px;">❓ ヘルプ</button>
+        <button class="btn-stamp" onclick="toggleHelpModal()">❓ ヘルプ</button>
     </header>
 
     <!-- ============ 打合せ表ビュー ============ -->
@@ -488,18 +500,14 @@
         </div>
         <div id="sheetPage">
             <div class="sh-head">
-                <div class="sh-head-l">
-                    <input id="eventPlace" class="sf sh-venue" placeholder="会場名">
-                    <div class="sh-title-row">
-                        <input id="eventName" class="sf sh-event" placeholder="催事名を入力">
-                        <div class="sh-org"><input id="sf_org" class="sf" placeholder="主催者名"><span class="sh-sama">様</span></div>
-                    </div>
-                </div>
+                <div class="frow" style="flex-shrink:0; margin-bottom:0;"><label style="width:auto;">利用日</label><input type="date" id="eventDate" class="sf sh-big" style="width:128px;"></div>
+                <div class="frow" style="flex:1; margin-bottom:0;"><label style="width:auto;">主催者名</label><input id="sf_org" class="sf sh-big" style="flex:1;"><span class="sh-sama">様</span></div>
+                <div class="frow" style="flex:1.25; margin-bottom:0;"><label style="width:auto;">催事名</label><input id="eventName" class="sf sh-big" style="flex:1;"></div>
                 <div class="sh-head-r">
-                    <div class="frow"><label>利用日</label><input type="date" id="eventDate" class="sf" style="width:130px;"></div>
-                    <div class="frow"><label>担当</label><input id="sf_tantou" class="sf" style="width:110px;"></div>
+                    <div class="frow"><label>会場</label><input id="eventPlace" class="sf" style="width:148px;"></div>
+                    <div class="frow"><label>担当</label><input id="sf_tantou" class="sf" style="width:148px;"></div>
                 </div>
-                <div class="sh-brand">舞台<br>打合せ表</div>
+                <div class="sh-brand">舞台打合せ表</div>
             </div>
             <div class="sh-grid">
                 <div class="sh-col sh-col-left">
@@ -550,9 +558,8 @@
                         <h4>舞台</h4>
                         <div class="band-body">
                             <div class="band-fields">
-                                <div class="frow"><label>緞帳</label><input id="sf_donchou" class="sf"></div>
-                                <div class="frow"><label>横看板・懸垂・旗</label><input id="sf_kanban" class="sf"></div>
-                                <div class="frow"><label>幕</label><input id="sf_maku" class="sf"></div>
+                                <div class="frow"><label>緞帳</label><select id="sf_donchou" class="sf" style="flex:0 0 90px;"><option value=""></option><option>あり</option><option>なし</option></select></div>
+                                <div class="frow" style="align-items:flex-start;"><label style="padding-top:3px;">横断幕・懸垂・旗</label><div class="chip-wrap" id="kanbanChips"></div></div>
                                 <div class="frow"><label>吊り物</label><input id="sf_tsurimono" class="sf"></div>
                                 <div class="frow"><label>ひな壇</label><input id="sf_hinadan" class="sf"></div>
                                 <textarea id="sf_stageNote" class="sf band-ta" placeholder="舞台メモ"></textarea>
@@ -564,9 +571,6 @@
                         <h4>音響</h4>
                         <div class="band-body">
                             <div class="band-fields">
-                                <div class="frow"><label>マイク</label><input id="sf_mic" class="sf"></div>
-                                <div class="frow"><label>再生（叩き）</label><input id="sf_playback" class="sf"></div>
-                                <div class="frow"><label>音響対応</label><input id="sf_soundSupport" class="sf"></div>
                                 <textarea id="sf_soundNote" class="sf band-ta" placeholder="音響メモ"></textarea>
                             </div>
                             <div class="band-thumb" id="bandThumb1"></div>
@@ -576,7 +580,7 @@
                         <h4>照明</h4>
                         <div class="band-body">
                             <div class="band-fields">
-                                <textarea id="sf_lighting" class="sf band-ta" placeholder="明かりの内容・仕込み・オペなど"></textarea>
+                                <textarea id="sf_lighting" class="sf band-ta" placeholder="照明メモ"></textarea>
                             </div>
                             <div class="band-thumb" id="bandThumb2"></div>
                         </div>
@@ -616,6 +620,7 @@
             <span class="group-label">履歴</span>
             <button onclick="undo()" title="Ctrl + Z">↩️ 戻す</button>
             <button onclick="redo()" title="Ctrl + Y">↪️ やり直す</button>
+            <button onclick="addStamp()" title="日付・主催者・催事名を図面に刻印">📝 打刻</button>
         </div>
         <div class="toolbar-group">
             <span class="group-label">グループ</span>
@@ -2757,10 +2762,11 @@
 
         const SHEET_FIELDS = [
             'sf_org','sf_tantou','sf_genre','sf_seat','sf_stageShape','sf_performers','sf_audience',
-            'sf_hannyu','sf_donchou','sf_kanban','sf_maku','sf_tsurimono','sf_hinadan','sf_piano','sf_stageNote',
-            'sf_lighting','sf_mic','sf_playback','sf_soundSupport','sf_soundNote',
+            'sf_hannyu','sf_donchou','sf_tsurimono','sf_hinadan','sf_piano','sf_stageNote',
+            'sf_lighting','sf_soundNote',
             'sf_projector','sf_videoNote','sf_floor2','sf_aircon','sf_foyer','sf_omoteNote','sf_tokki'
         ];
+        const KANBAN_ITEMS = ['横断幕','懸垂幕','プラザ枠','紙持込','業者施工','プラザ国旗','旗持込'];
         const TT_STANDARD = ['搬入','仕込み・準備','リハーサル','開場','開演','終演','搬出','退館'];
 
         const DEPT_NAMES = ['舞台図', '音響図', '照明図'];
@@ -2771,11 +2777,27 @@
             const place = document.getElementById('eventPlace');
             if (!place.value) place.value = 'くまもと森都心プラザ ホール';
             buildKubunGrid();
+            buildKanbanChips();
             if (document.getElementById('ttBody').children.length === 0) {
                 populateTimetable(null);
             }
             // シート内のあらゆる入力を未保存フラグに繋ぐ
             document.getElementById('sheetPage').addEventListener('input', markUnsaved);
+        }
+
+        // --- 横断幕・懸垂・旗チップ ---
+        function buildKanbanChips() {
+            const wrap = document.getElementById('kanbanChips');
+            wrap.innerHTML = '';
+            KANBAN_ITEMS.forEach(item => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'sel-chip';
+                b.dataset.k = item;
+                b.textContent = item;
+                b.onclick = () => { b.classList.toggle('on'); markUnsaved(); };
+                wrap.appendChild(b);
+            });
         }
 
         // --- 借用区分グリッド (クリックで 空欄→通常→倍額→空欄) ---
@@ -2896,6 +2918,7 @@
             });
             obj.chuui = document.getElementById('sf_chuui').checked;
             obj.kubunGrid = collectKubunGrid();
+            obj.kanban = [...document.querySelectorAll('#kanbanChips .sel-chip.on')].map(b => b.dataset.k);
             return obj;
         }
 
@@ -2907,6 +2930,10 @@
             });
             document.getElementById('sf_chuui').checked = !!obj.chuui;
             populateKubunGrid(obj.kubunGrid || null);
+            const kanban = Array.isArray(obj.kanban) ? obj.kanban : [];
+            document.querySelectorAll('#kanbanChips .sel-chip').forEach(b => {
+                b.classList.toggle('on', kanban.includes(b.dataset.k));
+            });
         }
 
         // --- 保存データの組み立て (JSONローカル保存・自動保存・Notion保存で共通) ---
