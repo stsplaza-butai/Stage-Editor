@@ -329,16 +329,16 @@
         }
         .sh-col { min-width: 0; display: flex; flex-direction: column; }
         .sh-col-right { min-height: 0; }
-        .sh-sec { margin-bottom: 6px; }
+        .sh-sec { margin-bottom: 4px; }
         .sh-sec h4, .band h4 {
-            margin: 0 0 3px; font-size: 9.5px; font-weight: bold; letter-spacing: .18em;
+            margin: 0 0 2px; font-size: 9.5px; font-weight: bold; letter-spacing: .18em;
             color: var(--sectext, #fff); background: var(--sec, #23425f);
             display: inline-block; padding: 1px 10px 1px 8px; border-radius: 2px;
         }
         .sh-sec-draw { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
         /* ラベル＋入力の行 */
-        .frow { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: 11px; }
+        .frow { display: flex; align-items: center; gap: 6px; margin-bottom: 1px; font-size: 11px; }
         .frow label {
             width: 80px; flex-shrink: 0; text-align: right;
             font-size: 9.5px; color: #5a6b7c;
@@ -440,8 +440,8 @@
         .kgtt-content { text-align: left; }
         .tt-cell {
             display: block; width: 100%; box-sizing: border-box; border: none; background: transparent;
-            font-size: 10px; line-height: 1.4; padding: 2px 4px; resize: none; overflow: hidden;
-            min-height: 19px; height: 19px; font-family: inherit; color: inherit; outline: none;
+            font-size: 10px; line-height: 1.35; padding: 1px 4px; resize: none; overflow: hidden;
+            min-height: 17px; height: 17px; font-family: inherit; color: inherit; outline: none;
         }
         .tt-cell:focus { background: #f4f8fe; }
         .kg-cell.s3 { background: #fff59d; font-weight: bold; }
@@ -466,18 +466,18 @@
         .band:first-child { border-radius: 4px 4px 0 0; }
         .band:last-child { border-radius: 0 0 4px 4px; }
         .band {
-            flex: 1; min-height: 0; display: flex; flex-direction: column;
+            flex: 0 0 auto; display: flex; flex-direction: column;
             border: 1px solid #e4e8ee; border-left: 3px solid var(--sec, #23425f);
-            padding: 4px 7px 6px; background: #fff;
+            padding: 4px 7px 5px; background: #fff;
         }
-        .band-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 318px; gap: 8px; }
+        .band-body { display: grid; grid-template-columns: 1fr 318px; gap: 8px; }
         .band-fields { min-width: 0; display: flex; flex-direction: column; }
-        .band-ta { flex: 1; min-height: 30px; margin-top: 2px; }
-        .band-thumb { min-height: 0; position: relative; }
-        .band-thumb .draw-slot { height: 100%; box-sizing: border-box; }
-        .band-thumb .draw-slot img { width: 100%; height: 100%; object-fit: contain; }
+        .band-ta { flex: 1; min-height: 52px; margin-top: 2px; }
+        .band-thumb { position: relative; }
+        .band-thumb .draw-slot { box-sizing: border-box; }
+        .band-thumb .draw-slot img { display: block; width: 100%; height: auto; }
         .band-thumb .ds-empty {
-            height: 100%; box-sizing: border-box; padding: 0;
+            height: 100%; min-height: 120px; box-sizing: border-box; padding: 0;
             display: flex; align-items: center; justify-content: center;
         }
 
@@ -533,8 +533,8 @@
                 <div class="frow" style="flex:1; margin-bottom:0;"><label style="width:auto;">主催者名</label><input id="sf_org" class="sf sh-big" style="flex:1;"><span class="sh-sama">様</span></div>
                 <div class="frow" style="flex:1.25; margin-bottom:0;"><label style="width:auto;">催事名</label><input id="eventName" class="sf sh-big" style="flex:1;"></div>
                 <div class="sh-head-r">
-                    <div class="frow"><label>会場</label><input id="eventPlace" class="sf" style="width:148px;"></div>
-                    <div class="frow"><label>担当</label><input id="sf_tantou" class="sf" style="width:148px;"></div>
+                    <div class="frow"><label>会場</label><input id="eventPlace" class="sf" style="width:205px;"></div>
+                    <div class="frow"><label>担当</label><input id="sf_tantou" class="sf" style="width:205px;"></div>
                 </div>
             </div>
             <div class="sh-grid">
@@ -549,7 +549,7 @@
                     </div>
                     <div class="sh-sec" style="--sec:#23425f;">
                         <h4>搬入</h4>
-                        <textarea id="sf_hannyu" class="sf" rows="2" placeholder="時間・車両・搬入口など"></textarea>
+                        <textarea id="sf_hannyu" class="sf" rows="2" placeholder="搬入内容・時間・車両など"></textarea>
                     </div>
                     <div class="sh-sec" style="--sec:#23425f;">
                         <h4>基本情報</h4>
@@ -571,10 +571,7 @@
                         <div class="frow"><label>ホワイエ</label><input id="sf_foyer" class="sf"></div>
                         <div class="frow"><label>メモ</label><input id="sf_omoteNote" class="sf"><label class="chk-label" style="width:auto;"><input type="checkbox" id="sf_chuui"> 注意事項説明済</label></div>
                     </div>
-                    <div class="sh-sec sh-sec-grow" style="--sec:#2f855a;">
-                        <h4>特記事項・備考</h4>
-                        <textarea id="sf_tokki" class="sf sh-ta-grow"></textarea>
-                    </div>
+
                 </div>
                 <div class="sh-col sh-col-bands">
                     <div class="band" style="--sec:#e2711d;">
@@ -607,6 +604,10 @@
                             </div>
                             <div class="band-thumb" id="bandThumb2"></div>
                         </div>
+                    </div>
+                    <div class="sh-sec sh-sec-grow" style="--sec:#c62828; margin-top:6px; margin-bottom:0;">
+                        <h4>特記事項・備考</h4>
+                        <textarea id="sf_tokki" class="sf sh-ta-grow"></textarea>
                     </div>
                 </div>
             </div>
@@ -2917,7 +2918,7 @@
         // --- タイムテーブル (時間スロット式) ---
         function ttAutoGrow(ta) {
             ta.style.height = 'auto';
-            ta.style.height = Math.max(19, ta.scrollHeight) + 'px';
+            ta.style.height = Math.max(17, ta.scrollHeight) + 'px';
         }
 
         function collectTimetable() {
@@ -3020,17 +3021,14 @@
                 }
                 const slot = document.createElement('div');
                 slot.className = 'draw-slot';
+                slot.title = name + ' (クリックで編集)';
                 slot.onclick = () => openDrawing(c.id);
-                const label = document.createElement('div');
-                label.className = 'ds-label';
-                label.textContent = name;
                 const img = document.createElement('img');
                 try {
                     const mul = 0.5 / c.canvasObj.getZoom();
                     img.src = c.canvasObj.toDataURL({ format: 'png', multiplier: mul });
                 } catch (e) { console.warn('サムネイル生成失敗:', e); }
                 slot.appendChild(img);
-                slot.appendChild(label);
                 box.appendChild(slot);
             });
         }
