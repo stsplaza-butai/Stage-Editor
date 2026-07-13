@@ -489,8 +489,8 @@
             .tt-btns, .no-print, #helpModal { display: none !important; }
             #sheetView { display: block !important; padding: 0 !important; background: #fff !important; overflow: visible !important; }
             #sheetPage {
-                width: 100% !important; min-height: 0 !important; height: 196mm;
-                box-shadow: none !important; padding: 0 !important; overflow: hidden;
+                min-height: 0 !important;
+                box-shadow: none !important; margin: 0 !important;
             }
             .sf::placeholder { color: transparent !important; }
             .sf:focus { background: transparent; }
@@ -3064,6 +3064,38 @@
             switchView('sheet');
             setTimeout(() => window.print(), 150);
         }
+
+        // 印刷直前: シート全体をA4横の印刷可能領域に収まる倍率へ自動縮小
+        function preparePrintScale() {
+            switchView('sheet');
+            const page = document.getElementById('sheetPage');
+            const view = document.getElementById('sheetView');
+            page.style.transform = 'none';
+            const w = page.offsetWidth;
+            const h = page.offsetHeight;
+            const PX_PER_MM = 96 / 25.4;
+            const availW = (297 - 12) * PX_PER_MM; // A4横 - 余白6mm×2
+            const availH = (210 - 12) * PX_PER_MM;
+            const k = Math.min(availW / w, availH / h, 1);
+            page.style.transform = `scale(${k})`;
+            page.style.transformOrigin = 'top left';
+            view.style.width = Math.floor(w * k) + 'px';
+            view.style.height = Math.floor(h * k) + 'px';
+            view.style.overflow = 'hidden';
+        }
+
+        function resetPrintScale() {
+            const page = document.getElementById('sheetPage');
+            const view = document.getElementById('sheetView');
+            page.style.transform = '';
+            page.style.transformOrigin = '';
+            view.style.width = '';
+            view.style.height = '';
+            view.style.overflow = '';
+        }
+
+        window.addEventListener('beforeprint', preparePrintScale);
+        window.addEventListener('afterprint', resetPrintScale);
 
         // ?print=1 付きで開かれた場合、読み込み完了後に自動で印刷ダイアログを開く
         const wantAutoPrint = new URLSearchParams(location.search).get('print') === '1';
