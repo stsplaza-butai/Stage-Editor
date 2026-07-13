@@ -279,7 +279,7 @@
         .st-btn.st-primary:hover { background: #2c80f0; }
 
         #sheetPage {
-            width: 1123px; min-height: 794px; margin: 0 auto;
+            width: 794px; min-height: 1123px; margin: 0 auto;
             background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.35);
             padding: 12px 14px 10px; box-sizing: border-box;
             display: flex; flex-direction: column;
@@ -307,6 +307,8 @@
             border-bottom: 2.5px solid #23425f; padding-bottom: 4px; margin-bottom: 6px;
         }
         .sh-big { font-size: 13px; font-weight: 600; }
+        .sh-head-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .sh-head-row { display: flex; gap: 12px; align-items: center; }
         .sh-head-l { flex: 1; min-width: 0; }
         .sh-venue { font-size: 11px; color: #5a6b7c; width: 60%; letter-spacing: .08em; }
         .sh-title-row { display: flex; align-items: baseline; gap: 14px; margin-top: 3px; }
@@ -322,10 +324,14 @@
             letter-spacing: .25em; text-align: center;
         }
 
-        /* 3カラムグリッド → 左カラム＋部署バンドの2カラム */
+        /* 上段2カラム + 部署バンド全幅の縦積み */
         .sh-grid {
             flex: 1; min-height: 0;
-            display: grid; grid-template-columns: 4fr 6fr; gap: 8px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .sh-top {
+            display: grid; grid-template-columns: 400px 1fr; gap: 10px;
+            align-items: start;
         }
         .sh-col { min-width: 0; display: flex; flex-direction: column; }
         .sh-col-right { min-height: 0; }
@@ -470,9 +476,9 @@
             border: 1px solid #e4e8ee; border-left: 3px solid var(--sec, #23425f);
             padding: 4px 7px 5px; background: #fff;
         }
-        .band-body { display: grid; grid-template-columns: 1fr 318px; gap: 8px; }
+        .band-body { display: grid; grid-template-columns: 1fr 330px; gap: 8px; }
         .band-fields { min-width: 0; display: flex; flex-direction: column; }
-        .band-ta { flex: 1; min-height: 52px; margin-top: 2px; }
+        .band-ta { flex: 1; min-height: 110px; margin-top: 2px; }
         .band-thumb { position: relative; }
         .band-thumb .draw-slot { box-sizing: border-box; }
         .band-thumb .draw-slot img { display: block; width: 100%; height: auto; }
@@ -483,7 +489,7 @@
 
         /* ============ 印刷 ============ */
         @media print {
-            @page { size: A4 landscape; margin: 6mm; }
+            @page { size: A4 portrait; margin: 6mm; }
             body { display: block !important; background: #fff !important; }
             header, .toolbar-row, .main-container, .status-bar, .sheet-toolbar,
             .tt-btns, .no-print, #helpModal { display: none !important; }
@@ -528,16 +534,21 @@
         <div id="sheetPage">
             <div class="sh-head">
                 <div class="sh-brand">舞台打合せ表</div>
-                <div class="frow" style="flex-shrink:0; margin-bottom:0;"><label style="width:auto;">利用日</label><input type="date" id="eventDate" class="sf sh-big" style="width:128px;"></div>
-                <div class="frow" style="flex:1; margin-bottom:0;"><label style="width:auto;">主催者名</label><input id="sf_org" class="sf sh-big" style="flex:1;"><span class="sh-sama">様</span></div>
-                <div class="frow" style="flex:1.25; margin-bottom:0;"><label style="width:auto;">催事名</label><input id="eventName" class="sf sh-big" style="flex:1;"></div>
-                <div class="sh-head-r">
-                    <div class="frow"><label>会場</label><input id="eventPlace" class="sf" style="width:205px;"></div>
-                    <div class="frow"><label>担当</label><input id="sf_tantou" class="sf" style="width:205px;"></div>
+                <div class="sh-head-main">
+                    <div class="sh-head-row">
+                        <div class="frow" style="margin-bottom:0;"><label style="width:auto;">利用日</label><input type="date" id="eventDate" class="sf sh-big" style="width:122px;"></div>
+                        <div class="frow" style="flex:1; margin-bottom:0;"><label style="width:auto;">会場</label><input id="eventPlace" class="sf" style="flex:1;"></div>
+                        <div class="frow" style="margin-bottom:0;"><label style="width:auto;">担当</label><input id="sf_tantou" class="sf" style="width:110px;"></div>
+                    </div>
+                    <div class="sh-head-row">
+                        <div class="frow" style="flex:1; margin-bottom:0;"><label style="width:auto;">主催者名</label><input id="sf_org" class="sf sh-big" style="flex:1;"><span class="sh-sama">様</span></div>
+                        <div class="frow" style="flex:1.15; margin-bottom:0;"><label style="width:auto;">催事名</label><input id="eventName" class="sf sh-big" style="flex:1;"></div>
+                    </div>
                 </div>
             </div>
             <div class="sh-grid">
-                <div class="sh-col sh-col-left">
+                <div class="sh-top">
+                <div class="sh-col">
                     <div class="sh-sec" style="--sec:#23425f;">
                         <h4>タイムテーブル・借用区分</h4>
                         <table class="kgtt">
@@ -546,6 +557,8 @@
                         </table>
                         <div class="kg-legend no-print"><span class="kg-cell s1" style="cursor:default;">通</span> 通常　<span class="kg-cell s2" style="cursor:default;">倍</span> 倍額　<span class="kg-cell s3" style="cursor:default;">直</span> 直前割 — 部屋のセルをクリックで切替</div>
                     </div>
+                    </div>
+                    <div class="sh-col">
                     <div class="sh-sec" style="--sec:#23425f;">
                         <h4>搬入</h4>
                         <textarea id="sf_hannyu" class="sf" rows="2" placeholder="搬入内容・時間・車両など"></textarea>
@@ -571,6 +584,7 @@
                         <div class="frow"><label>メモ</label><input id="sf_omoteNote" class="sf"><label class="chk-label" style="width:auto;"><input type="checkbox" id="sf_chuui"> 注意事項説明済</label></div>
                     </div>
 
+                    </div>
                 </div>
                 <div class="sh-col sh-col-bands">
                     <div class="band" style="--sec:#e2711d;">
@@ -1033,8 +1047,10 @@
         }
 
         // --- キャンバス追加・管理 ---
+        let canvasSeq = 0;
         function addNewCanvasBlock(title = '新規図面') {
-            const id = 'canvas_' + Date.now();
+            const id = 'canvas_' + Date.now() + '_' + (canvasSeq++);
+            const deletable = canvasList.length >= 3; // 舞台図・音響図・照明図は削除不可
             const container = document.getElementById('canvasContainer');
             const addBtnContainer = container.querySelector('div[style*="display:flex"]');
 
@@ -1052,7 +1068,7 @@
                     <label style="font-size:11px; margin-left:10px; cursor:pointer;">
                         <input type="checkbox" id="chk_${id}" checked> 🖨️ 書出
                     </label>
-                    <button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}')">🗑️ 削除</button>
+                    ${deletable ? `<button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}', this)">🗑️ 削除</button>` : ''}
                 </div>
                 <div class="canvas-wrapper" onclick="activateCanvas('${id}')">
                     <canvas id="${id}" width="840" height="500"></canvas>
@@ -1091,8 +1107,17 @@
             
         }
 
-        function deleteCanvasBlock(id) {
-            if(!confirm('この図面を削除しますか？')) return;
+        function deleteCanvasBlock(id, btn) {
+            // 1回目のクリックで確認状態、3秒以内の2回目で削除
+            // (confirm()はNotion埋め込み内でブロックされるため使わない)
+            if (btn && !btn.dataset.arm) {
+                btn.dataset.arm = '1';
+                btn.textContent = '❗ もう一度押すと削除';
+                setTimeout(() => {
+                    if (btn.isConnected) { delete btn.dataset.arm; btn.textContent = '🗑️ 削除'; }
+                }, 3000);
+                return;
+            }
             const idx = canvasList.findIndex(c => c.id === id);
             if(idx > -1) {
                 canvasList[idx].canvasObj.dispose(); canvasList[idx].blockElement.remove(); canvasList.splice(idx, 1);
@@ -3074,8 +3099,8 @@
             const w = page.offsetWidth;
             const h = page.offsetHeight;
             const PX_PER_MM = 96 / 25.4;
-            const availW = (297 - 12) * PX_PER_MM; // A4横 - 余白6mm×2
-            const availH = (210 - 12) * PX_PER_MM;
+            const availW = (210 - 12) * PX_PER_MM; // A4縦 - 余白6mm×2
+            const availH = (297 - 12) * PX_PER_MM;
             const k = Math.min(availW / w, availH / h, 1);
             page.style.transform = `scale(${k})`;
             page.style.transformOrigin = 'top left';
