@@ -459,6 +459,25 @@
         .tt-cell:focus { background: #f4f8fe; }
         .kg-cell.s3 { background: #fff59d; font-weight: bold; }
 
+        /* キャンバス下のメタ情報欄 */
+        .canvas-meta {
+            display: flex; align-items: stretch; background: #fff;
+            border: 1px solid #90a4ae; border-top: none; font-size: 12px;
+        }
+        .cm-label {
+            display: flex; align-items: center; padding: 4px 10px;
+            background: #eceff1; color: #455a64; font-size: 11px; font-weight: 600;
+            border-right: 1px solid #b0bec5; white-space: nowrap;
+        }
+        .cm-field {
+            border: none; outline: none; padding: 4px 10px; font-size: 12px;
+            border-right: 1px solid #b0bec5; min-width: 0; font-family: inherit;
+        }
+        .cm-field:focus { background: #f4f8fe; }
+        .cm-date { flex: 0 0 150px; }
+        .cm-title { flex: 1.1; }
+        .cm-org { flex: 1.4; border-right: none; }
+
         /* スタートゲート */
         #startGate {
             display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -608,6 +627,7 @@
                 <input type="date" id="eventDate">
                 <input id="eventName">
                 <input id="eventPlace">
+                <input id="sf_org">
             </div>
             <div class="sh-sec" style="--sec:#23425f;">
                 <div class="no-print" style="margin-bottom:4px;"><button type="button" class="add-mini-btn" onclick="addDayBefore()">＋ 前日を追加</button></div>
@@ -642,7 +662,6 @@
             <button onclick="redo()" title="Ctrl + Y">↪️ やり直す</button>
         </div>
         <div class="toolbar-group">
-            <button onclick="addStamp()" title="日付・主催者・催事名を図面に刻印">📝 打刻</button>
             <button onclick="toggleHelpModal()">❓ ヘルプ</button>
         </div>
         <div class="toolbar-group">
@@ -932,7 +951,7 @@
 
         // ツールバーの数値入力欄に外付けの−＋ボタンを追加
         function setupNumberSteppers() {
-            document.querySelectorAll('.toolbar-row input[type="number"]').forEach(inp => {
+            document.querySelectorAll('input[type="number"]').forEach(inp => {
                 const mk = (label, fn) => {
                     const b = document.createElement('button');
                     b.type = 'button';
@@ -1052,6 +1071,18 @@
         }
 
         // --- キャンバス追加・管理 ---
+        // 全キャンバスのメタ欄(日付・催事名・主催者名)をマスター値で更新
+        function syncCanvasMeta() {
+            const vals = {
+                '.cm-date': document.getElementById('eventDate').value,
+                '.cm-title': document.getElementById('eventName').value,
+                '.cm-org': document.getElementById('sf_org').value
+            };
+            Object.entries(vals).forEach(([sel, v]) => {
+                document.querySelectorAll(sel).forEach(f => { if (f.value !== v) f.value = v; });
+            });
+        }
+
         let canvasSeq = 0;
         function addNewCanvasBlock(title = '新規図面') {
             const id = 'canvas_' + Date.now() + '_' + (canvasSeq++);
@@ -1078,10 +1109,27 @@
                 <div class="canvas-wrapper" onclick="activateCanvas('${id}')">
                     <canvas id="${id}" width="840" height="500"></canvas>
                 </div>
+                <div class="canvas-meta">
+                    <span class="cm-label">日付</span><input type="date" class="cm-field cm-date">
+                    <span class="cm-label">催事名</span><input class="cm-field cm-title" placeholder="催事名">
+                    <span class="cm-label">主催者名</span><input class="cm-field cm-org" placeholder="主催者名">
+                </div>
             `;
             
             container.insertBefore(block, addBtnContainer); 
             block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // メタ欄: マスター(隠し入力)と同期
+            const metaMap = { '.cm-date': 'eventDate', '.cm-title': 'eventName', '.cm-org': 'sf_org' };
+            Object.entries(metaMap).forEach(([sel, masterId]) => {
+                const field = block.querySelector(sel);
+                field.value = document.getElementById(masterId).value;
+                field.addEventListener('input', () => {
+                    document.getElementById(masterId).value = field.value;
+                    syncCanvasMeta();
+                    markUnsaved();
+                });
+            });
             const fCanvas = new fabric.Canvas(id, { preserveObjectStacking: true });
             fCanvas.backgroundColor = "white";
             
@@ -2353,6 +2401,43 @@
             });
         }
 
+        // 図面の下にメタ情報(日付｜催事名｜主催者名)を焼き込んだ画像を生成
+        function canvasWithMeta(c, format, quality, mulBase) {
+            return new Promise((resolve, reject) => {
+                const mul = mulBase / c.canvasObj.getZoom();
+                const src = c.canvasObj.toDataURL({ format: 'png', multiplier: mul });
+                const img = new Image();
+                img.onload = () => {
+                    const scale = img.width / BASE_WIDTH;
+                    const stripH = Math.round(36 * scale);
+                    const cv = document.createElement('canvas');
+                    cv.width = img.width;
+                    cv.height = img.height + stripH;
+                    const ctx = cv.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, cv.width, cv.height);
+                    ctx.drawImage(img, 0, 0);
+                    const lw = Math.max(1, Math.round(scale));
+                    ctx.strokeStyle = '#607d8b';
+                    ctx.lineWidth = lw;
+                    ctx.strokeRect(lw / 2, img.height + lw / 2, cv.width - lw, stripH - lw);
+                    ctx.fillStyle = '#263238';
+                    ctx.font = `${Math.round(17 * scale)}px "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif`;
+                    ctx.textBaseline = 'middle';
+                    const dv = document.getElementById('eventDate').value;
+                    const text = `日付：${dv ? dv.split('-').join('/') : ''}　｜　催事名：${document.getElementById('eventName').value.trim()}　｜　主催者名：${document.getElementById('sf_org').value.trim()}`;
+                    ctx.fillText(text, Math.round(12 * scale), img.height + stripH / 2);
+                    resolve({
+                        dataUrl: cv.toDataURL(format === 'jpeg' ? 'image/jpeg' : 'image/png', quality),
+                        w: cv.width,
+                        h: cv.height
+                    });
+                };
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
         function setPdfStatus(msg, isOk) {
             const el = document.getElementById('pdfStatus');
             if (el) { el.textContent = msg; el.style.color = isOk ? '#2e7d32' : '#455a64'; }
@@ -2364,16 +2449,16 @@
             const targets = canvasList.filter(c => c.canvasObj.getObjects().length > 0);
             if (targets.length === 0) { setPdfStatus('書き出せる図面がありません'); return; }
             const pdf = new jsPDF('l', 'mm', 'a4');
-            targets.forEach((c, index) => {
+            for (let index = 0; index < targets.length; index++) {
+                const c = targets[index];
                 if (index > 0) pdf.addPage('a4', 'l');
-                const mul = 1.5 / c.canvasObj.getZoom();
-                const imgData = c.canvasObj.toDataURL({ format: 'jpeg', quality: 0.85, multiplier: mul });
+                const r = await canvasWithMeta(c, 'jpeg', 0.85, 1.5);
                 const pdfW = 297, pdfH = 210;
-                const ratio = Math.min(pdfW / BASE_WIDTH, pdfH / c.heightState) * 0.95;
-                const w = BASE_WIDTH * ratio;
-                const h = c.heightState * ratio;
-                pdf.addImage(imgData, 'JPEG', (pdfW - w) / 2, (pdfH - h) / 2, w, h);
-            });
+                const k = Math.min((pdfW * 0.95) / r.w, (pdfH * 0.95) / r.h);
+                const w = r.w * k;
+                const h = r.h * k;
+                pdf.addImage(r.dataUrl, 'JPEG', (pdfW - w) / 2, (pdfH - h) / 2, w, h);
+            }
             const d = document.getElementById('eventDate').value;
             const n = document.getElementById('eventName').value.trim();
             const baseName = [d, n].filter(Boolean).join('_') || 'zumen';
@@ -2389,7 +2474,7 @@
                             headers: { 'Content-Type': 'application/json', ...notionHeaders() },
                             body: JSON.stringify({
                                 pdf: pdf.output('datauristring'),
-                                filename: `${baseName}_図面.pdf`
+                                filename: `図面_${baseName}.pdf`
                             })
                         }
                     );
@@ -2990,7 +3075,8 @@
                 meta: {
                     date: document.getElementById('eventDate').value,
                     title: document.getElementById('eventName').value.trim(),
-                    place: document.getElementById('eventPlace').value.trim()
+                    place: document.getElementById('eventPlace').value.trim(),
+                    org: document.getElementById('sf_org').value.trim()
                 },
                 days: collectDays(),
                 data: canvasList.map(c => ({
@@ -3012,7 +3098,7 @@
                 }];
             }
             populateDays(days || null);
-            setTimeout(refreshSheetThumbs, 800);
+            setTimeout(() => { refreshSheetThumbs(); syncCanvasMeta(); }, 800);
         }
 
         // ===== 図面リスト =====
@@ -3184,6 +3270,7 @@
         // --- Notionプロパティの反映 (打刻用の隠しメタ情報と日付初期値) ---
         function applyNotionProps(props) {
             if (props['催事名']) document.getElementById('eventName').value = props['催事名'];
+            if (props['主催者名']) document.getElementById('sf_org').value = props['主催者名'];
             const titleText = props['予定タイトル'] || props['Name'] || '';
             const m = titleText.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
             if (m) {
@@ -3192,6 +3279,7 @@
                 // 日付未入力の日ブロックに反映
                 document.querySelectorAll('.day-date').forEach(inp => { if (!inp.value) inp.value = iso; });
             }
+            syncCanvasMeta();
         }
 
         // --- 画像貼り付け: タイムテーブル(日ごと)と図面(1枚ずつ)を個別画像で貼る ---
@@ -3225,17 +3313,15 @@
                     }
                 }
 
-                // 2) 図面1枚ずつ (何か描いてあるものだけ)
-                canvasList.forEach((c, i) => {
-                    if (c.canvasObj.getObjects().length === 0) return;
+                // 2) 図面1枚ずつ (何か描いてあるものだけ・下部にメタ情報付き)
+                for (let i = 0; i < canvasList.length; i++) {
+                    const c = canvasList[i];
+                    if (c.canvasObj.getObjects().length === 0) continue;
                     try {
-                        const mul = 1.4 / c.canvasObj.getZoom();
-                        images.push({
-                            png: c.canvasObj.toDataURL({ format: 'png', multiplier: mul }),
-                            caption: c.title || ('図面' + (i + 1))
-                        });
+                        const r = await canvasWithMeta(c, 'png', 0.92, 1.4);
+                        images.push({ png: r.dataUrl, caption: c.title || ('図面' + (i + 1)) });
                     } catch (e) { console.warn('図面画像化失敗:', e); }
-                });
+                }
 
                 if (images.length === 0) throw new Error('貼り付ける内容がありません');
                 setNotionStatus(`⏳ ${images.length}枚をNotionに貼り付け中…`);
@@ -3420,6 +3506,7 @@
                 document.getElementById('eventDate').value = content.meta.date || "";
                 document.getElementById('eventName').value = content.meta.title || "";
                 document.getElementById('eventPlace').value = content.meta.place || "";
+                document.getElementById('sf_org').value = content.meta.org || "";
                 dataToImport = content.data;
             }
 
