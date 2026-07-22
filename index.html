@@ -452,6 +452,19 @@
         .tt-cell:focus { background: #f4f8fe; }
         .kg-cell.s3 { background: #fff59d; font-weight: bold; }
 
+        /* スタートゲート */
+        #startGate {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            gap: 12px; padding: 60px 20px;
+        }
+        .start-btn {
+            font-size: 16px; font-weight: bold; padding: 14px 36px; cursor: pointer;
+            background: #1a73e8; color: #fff; border: none; border-radius: 30px;
+            box-shadow: 0 4px 14px rgba(0,0,0,.3);
+        }
+        .start-btn:hover { background: #2c80f0; }
+        .start-note { font-size: 11px; color: #c8d2da; }
+
         /* 集中編集モード */
         body.focus-draw .canvas-block { display: none; }
         body.focus-draw .canvas-block.focused { display: block; }
@@ -568,6 +581,10 @@
             </span>
             <span style="flex:1"></span>
             <span style="font-size:10.5px; color:#c8d2da;">図面サムネイルをクリックすると編集画面へ移動します</span>
+        </div>
+        <div id="startGate" style="display:none;">
+            <button type="button" class="start-btn" onclick="startEditor()">▶️ タイムテーブル・図面を開く</button>
+            <div class="start-note">閲覧だけの場合はこのままでOKです (ページに貼られた画像をご覧ください)</div>
         </div>
         <div id="sheetPage">
             <!-- 打刻・保存用の隠しメタ情報 (Notionから自動設定される) -->
@@ -911,9 +928,9 @@
         const AUTO_SAVE_INTERVAL = 30000;
 
         window.onload = function() {
-            createDefaultCanvases();
             initMeetingSheet();
-            switchView('sheet');
+            switchView('sheet'); // 先にシートモードにして図面エリアを非表示にしてから
+            createDefaultCanvases(); // キャンバスを作る (自動スクロールがNotionページを揺らさないように)
             setInterval(checkAndAutoSave, AUTO_SAVE_INTERVAL);
         };
 
@@ -3239,11 +3256,28 @@
             if (notionEventId) {
                 document.getElementById('notionGroup').style.display = 'flex';
                 document.querySelectorAll('.notion-only').forEach(el => el.style.display = '');
-                notionLoad();
+                if (wantAutoPrint) {
+                    // 印刷指定で開かれた場合は即読み込み
+                    startEditor();
+                } else {
+                    // 「開く」ボタンが押されるまで読み込みを保留 (閲覧専用の人の邪魔をしない)
+                    document.getElementById('startGate').style.display = 'flex';
+                    document.getElementById('sheetPage').style.display = 'none';
+                    const tb = document.querySelector('.sheet-toolbar');
+                    if (tb) tb.style.display = 'none';
+                }
             } else {
                 autoPrintIfRequested();
             }
         };
+
+        function startEditor() {
+            document.getElementById('startGate').style.display = 'none';
+            document.getElementById('sheetPage').style.display = '';
+            const tb = document.querySelector('.sheet-toolbar');
+            if (tb) tb.style.display = '';
+            notionLoad();
+        }
 
         function notionHeaders() {
             return NOTION_APP_KEY ? { 'X-App-Key': NOTION_APP_KEY } : {};
