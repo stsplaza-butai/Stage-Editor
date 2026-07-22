@@ -117,7 +117,14 @@
         .color-chip:hover { transform: scale(3); border-color: #666; z-index: 100; box-shadow: 0 0 4px rgba(0,0,0,0.3);}
         
         .style-row { display: flex; align-items: center; justify-content: space-between; font-size: 10px; margin-bottom: 3px;}
-        input[type="number"] { width: 35px; padding: 2px; font-size: 10px; }
+        input[type="number"] { width: 34px; padding: 2px; font-size: 11px; text-align: center; -moz-appearance: textfield; appearance: textfield; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .num-step {
+            width: 18px; padding: 0; font-size: 12px; line-height: 1;
+            cursor: pointer; border: 1px solid #b0bec5; background: #eceff1; border-radius: 3px;
+        }
+        .num-step:hover { background: #fff; }
         input[type="range"] { width: 60px; height: 10px; cursor: pointer; }
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
@@ -428,11 +435,11 @@
 
         /* 借用区分・タイムテーブル合体表 */
         .kgtt { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .kgtt th, .kgtt td { border: 1px solid #dfe4ea; font-size: 9px; padding: 0; text-align: center; }
+        .kgtt th, .kgtt td { border: 1px solid #dfe4ea; font-size: 11px; padding: 0; text-align: center; }
         .kgtt thead th { background: #eef2f6; color: #5a6b7c; font-weight: 600; padding: 1px 0; }
-        .kgtt th.c-k { width: 17px; }
-        .kgtt th.c-h { width: 19px; }
-        .kgtt th.c-r { width: 21px; }
+        .kgtt th.c-k { width: 22px; }
+        .kgtt th.c-h { width: 24px; }
+        .kgtt th.c-r { width: 26px; }
         .kgtt-period { font-weight: 700; }
         .kgtt-period.p0 { background: #f6e3d2; color: #9a5b1e; }
         .kgtt-period.p1 { background: #e0efe1; color: #2f6b3a; }
@@ -446,8 +453,8 @@
         .kgtt-content { text-align: left; }
         .tt-cell {
             display: block; width: 100%; box-sizing: border-box; border: none; background: transparent;
-            font-size: 10px; line-height: 1.35; padding: 1px 4px; resize: none; overflow: hidden;
-            min-height: 17px; height: 17px; font-family: inherit; color: inherit; outline: none;
+            font-size: 13px; line-height: 1.4; padding: 3px 6px; resize: none; overflow: hidden;
+            min-height: 25px; height: 25px; font-family: inherit; color: inherit; outline: none;
         }
         .tt-cell:focus { background: #f4f8fe; }
         .kg-cell.s3 { background: #fff59d; font-weight: bold; }
@@ -590,7 +597,6 @@
                 <span class="notion-status" style="font-size:11px; color:#dfe6ec; margin-left:8px;"></span>
             </span>
             <span style="flex:1"></span>
-            <span style="font-size:10.5px; color:#c8d2da;">図面サムネイルをクリックすると編集画面へ移動します</span>
         </div>
         <div id="startGate" style="display:none;">
             <button type="button" class="start-btn" onclick="startEditor()">▶️ タイムテーブル・図面を開く</button>
@@ -620,15 +626,9 @@
 
     <div class="toolbar-row top-toolbar">
         <div class="toolbar-group">
-            <span class="group-label">ファイル(JSON)</span>
-            <button onclick="saveAllJSON()" class="btn-blue">保存</button>
-            <button onclick="document.getElementById('jsonInput').click()">読込</button>
-            <button onclick="loadFromAutoSave()" class="btn-resume" title="前回の作業内容を復元">📂 再開</button>
-            <input type="file" id="jsonInput" accept=".json" onchange="loadJSON(this)" style="display:none">
-        </div>
-        <div class="toolbar-group">
             <span class="group-label">書出し</span>
-            <button onclick="saveCombinedPDF()" class="btn-red">📄 PDF書出し</button>
+            <button onclick="saveCombinedPDF()" class="btn-red">📄 図面PDF</button>
+            <span id="pdfStatus" style="font-size:10px; color:#455a64; white-space:nowrap;"></span>
         </div>
         
         <div class="toolbar-group">
@@ -930,11 +930,33 @@
         let hasUnsavedChanges = false;
         const AUTO_SAVE_INTERVAL = 30000;
 
+        // ツールバーの数値入力欄に外付けの−＋ボタンを追加
+        function setupNumberSteppers() {
+            document.querySelectorAll('.toolbar-row input[type="number"]').forEach(inp => {
+                const mk = (label, fn) => {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'num-step';
+                    b.textContent = label;
+                    b.onclick = () => {
+                        fn();
+                        inp.dispatchEvent(new Event('input', { bubbles: true }));
+                        inp.dispatchEvent(new Event('change', { bubbles: true }));
+                    };
+                    return b;
+                };
+                const minus = mk('−', () => inp.stepDown());
+                const plus = mk('＋', () => inp.stepUp());
+                inp.parentNode.insertBefore(minus, inp);
+                inp.parentNode.insertBefore(plus, inp.nextSibling);
+            });
+        }
+
         window.onload = function() {
+            setupNumberSteppers();
             initMeetingSheet();
             switchView('sheet'); // 先にシートモードにして図面エリアを非表示にしてから
             createDefaultCanvases(); // キャンバスを作る (自動スクロールがNotionページを揺らさないように)
-            setInterval(checkAndAutoSave, AUTO_SAVE_INTERVAL);
         };
 
         function createDefaultCanvases() {
@@ -2331,11 +2353,16 @@
             });
         }
 
-        function saveCombinedPDF() {
+        function setPdfStatus(msg, isOk) {
+            const el = document.getElementById('pdfStatus');
+            if (el) { el.textContent = msg; el.style.color = isOk ? '#2e7d32' : '#455a64'; }
+        }
+
+        async function saveCombinedPDF() {
             const { jsPDF } = window.jspdf;
             // 何か描いてある図面を、1枚につきA4横1ページで書き出す
             const targets = canvasList.filter(c => c.canvasObj.getObjects().length > 0);
-            if (targets.length === 0) return;
+            if (targets.length === 0) { setPdfStatus('書き出せる図面がありません'); return; }
             const pdf = new jsPDF('l', 'mm', 'a4');
             targets.forEach((c, index) => {
                 if (index > 0) pdf.addPage('a4', 'l');
@@ -2350,11 +2377,33 @@
             const d = document.getElementById('eventDate').value;
             const n = document.getElementById('eventName').value.trim();
             const baseName = [d, n].filter(Boolean).join('_') || 'zumen';
-            if (window.self !== window.top) {
-                // Notion埋め込み内ではダウンロードがブロックされるため、新しいタブでPDFを開く
+
+            if (notionEventId) {
+                // Notion連携時: プロパティ「進行表・台本・図面」にPDFを追加保存
+                setPdfStatus('⏳ Notionに保存中…');
+                try {
+                    const res = await fetch(
+                        `${NOTION_WORKER_URL}/pdf?id=${encodeURIComponent(notionEventId)}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', ...notionHeaders() },
+                            body: JSON.stringify({
+                                pdf: pdf.output('datauristring'),
+                                filename: `${baseName}_図面.pdf`
+                            })
+                        }
+                    );
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+                    setPdfStatus('✅ プロパティに保存しました', true);
+                } catch (e) {
+                    console.error('PDF保存エラー:', e);
+                    setPdfStatus('❌ 保存失敗: ' + e.message);
+                }
+            } else if (window.self !== window.top) {
                 const blobUrl = pdf.output('bloburl');
                 const win = window.open(blobUrl, '_blank');
-                if (!win) pdf.save(`${baseName}.pdf`); // ポップアップブロック時の保険
+                if (!win) pdf.save(`${baseName}.pdf`);
             } else {
                 pdf.save(`${baseName}.pdf`);
             }
@@ -2752,6 +2801,11 @@
             document.getElementById('tabSheet').classList.toggle('active', isSheet);
             document.getElementById('tabDraw').classList.toggle('active', !isSheet);
             if (isSheet) {
+                // 集中編集モードの解除 (戻るボタンを消す)
+                document.body.classList.remove('focus-draw');
+                canvasList.forEach(c => c.blockElement.classList.remove('focused'));
+                const fb = document.getElementById('focusBackBtn');
+                if (fb) fb.style.display = 'none';
                 refreshSheetThumbs();
             } else {
                 canvasList.forEach(c => c.canvasObj.requestRenderAll());
@@ -2903,7 +2957,7 @@
 
         function ttAutoGrow(ta) {
             ta.style.height = 'auto';
-            ta.style.height = Math.max(17, ta.scrollHeight) + 'px';
+            ta.style.height = Math.max(25, ta.scrollHeight) + 'px';
         }
 
         function collectDays() {
@@ -2983,9 +3037,6 @@
                 name.className = 'sf draw-name';
                 name.value = c.title || ('図面' + (i + 1));
                 name.oninput = () => updateDrawTitle(c.id, name.value);
-                const hint = document.createElement('span');
-                hint.className = 'draw-hint no-print';
-                hint.textContent = '(図面クリックで編集)';
                 const ops = document.createElement('span');
                 ops.className = 'draw-ops no-print';
                 const upBtn = document.createElement('button');
@@ -3003,7 +3054,6 @@
                 ops.appendChild(upBtn);
                 ops.appendChild(dnBtn);
                 head.appendChild(name);
-                head.appendChild(hint);
                 head.appendChild(ops);
                 const slot = document.createElement('div');
                 slot.className = 'draw-slot';
@@ -3446,7 +3496,7 @@
             } catch (e) {
                 console.error('Notion保存エラー:', e);
                 setNotionStatus('❌ 保存失敗');
-                alert('Notionへの保存に失敗しました。\n' + e.message + '\n\n念のため「ファイル(JSON) → 保存」でローカルにも保存しておいてください。');
+                alert('Notionへの保存に失敗しました。\n' + e.message + '\n\n通信環境を確認して、もう一度保存してください。');
             } finally {
                 btn.disabled = false;
             }
