@@ -482,6 +482,7 @@
         .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
         .day-label { font-size: 10px; color: #5a6b7c; font-weight: 600; }
         .day-date { width: 130px; font-size: 12px; font-weight: 600; }
+        .day-dow { font-size: 12px; font-weight: 600; color: #3c4c5c; }
         .day-del {
             margin-left: auto; font-size: 9.5px; padding: 1px 8px; cursor: pointer;
             border: 1px solid #d4dae0; border-radius: 3px; background: #fff; color: #97a3ae;
@@ -573,7 +574,6 @@
     <!-- ============ 打合せ表ビュー ============ -->
     <div id="sheetView">
         <div class="sheet-toolbar">
-            <button class="st-btn" onclick="printSheet()">🖨️ 印刷 / PDF</button>
             <span class="notion-only" style="display:none;">
                 <button class="st-btn st-primary" onclick="notionSave()">☁️ Notionに保存</button>
                 <button class="st-btn" onclick="notionPasteImage()" title="現在の内容を画像化してNotionページの上部に貼り付けます">🖼️ ページに画像を貼る</button>
@@ -594,13 +594,11 @@
                 <input id="eventPlace">
             </div>
             <div class="sh-sec" style="--sec:#23425f;">
-                <h4>タイムテーブル・借用区分</h4>
                 <div id="daysContainer"></div>
                 <div class="kg-legend no-print"><span class="kg-cell s1" style="cursor:default;">通</span> 通常　<span class="kg-cell s2" style="cursor:default;">倍</span> 倍額　<span class="kg-cell s3" style="cursor:default;">直</span> 直前割 — 部屋のセルをクリックで切替</div>
                 <div class="no-print" style="margin-top:4px;"><button type="button" class="add-mini-btn" onclick="addDay()">＋ 日を追加</button></div>
             </div>
             <div class="sh-sec" style="--sec:#23425f; margin-top:12px;">
-                <h4>図面</h4>
                 <div id="drawList"></div>
                 <div class="no-print" style="margin-top:6px;"><button type="button" class="add-mini-btn" onclick="sheetAddDrawing()">＋ 図面を追加</button></div>
             </div>
@@ -624,8 +622,7 @@
         </div>
         <div class="toolbar-group">
             <span class="group-label">書出し</span>
-            <button onclick="saveCombinedJPG()" class="btn-green">JPG(連結)</button>
-            <button onclick="saveCombinedPDF()" class="btn-red">PDF</button>
+            <button onclick="saveCombinedPDF()" class="btn-red">📄 PDF書出し</button>
         </div>
         
         <div class="toolbar-group">
@@ -879,7 +876,7 @@
                             常に最新の状態が上書きされ、ファイルがどんどん増えることはありません。
                             保存時は画面右下にメッセージが表示されます。（編集がない場合は休止）</li>
                 <li><strong>再開：</strong> 自動保存の読込。うっかりブラウザを閉じた時などに。起動後30秒以内！</li>
-                <li><strong>JPG：</strong> 各キャンバスを縦に連結した一枚のJPG画像として書出します。</li>
+                <li><strong>PDF：</strong> 各図面を1枚ずつA4横のページにしたPDFを書出します。</li>
                 <li><strong>PDF：</strong>１キャンバス１ページでPDFとして書出します。</li>
                 <li><strong>☑️ 書出：</strong> キャンバス上のチェックを外すと書出しから除外されます。</li>
                 <li><strong>日付・イベント名・場所：</strong> 入力があるとファイル名に反映されます。<br>
@@ -1046,7 +1043,7 @@
                         <button class="btn-mini btn-size" onclick="setCanvasHeight('${id}', 1650, this)">＋客席後方</button>
                     </div>
                     <label style="font-size:11px; margin-left:10px; cursor:pointer;">
-                        <input type="checkbox" id="chk_${id}" checked> 🖨️ 書出
+                        
                     </label>
                     ${deletable ? `<button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}', this)">🗑️ 削除</button>` : ''}
                 </div>
@@ -2328,98 +2325,27 @@
             });
         }
 
-        function saveCombinedPDF() { 
-            const { jsPDF } = window.jspdf; 
-            const targets = canvasList.filter(c => { const chk = document.getElementById('chk_' + c.id); return chk && chk.checked; }); 
-            if(targets.length === 0) return; 
-            const firstIsPortrait = targets[0].heightState > 600; 
-            const pdf = new jsPDF(firstIsPortrait ? 'p' : 'l', 'mm', 'a4'); 
-            
-            targets.forEach((c, index) => { 
-                const isPortrait = c.heightState > 600; 
-                if (index > 0) { pdf.addPage('a4', isPortrait ? 'p' : 'l'); } 
-                const curZoom = c.canvasObj.getZoom(); 
-                const targetMultiplier = 1.5 / curZoom; 
-                const imgData = c.canvasObj.toDataURL({ format: 'jpeg', quality: 0.8, multiplier: targetMultiplier }); 
-                const pdfW = isPortrait ? 210 : 297; 
-                const pdfH = isPortrait ? 297 : 210; 
-                const cW = BASE_WIDTH; 
-                const cH = c.heightState; 
-                const ratio = Math.min(pdfW / cW, pdfH / cH) * 0.95; 
-                const w = cW * ratio; 
-                const h = cH * ratio; 
-                const x = (pdfW - w) / 2; 
-                const y = (pdfH - h) / 2; 
-                pdf.addImage(imgData, 'JPEG', x, y, w, h); 
-            }); 
-            
-            // ▼▼▼ 変更点: ファイル名生成ロジック ▼▼▼
-            const d = document.getElementById('eventDate').value; 
-            const n = document.getElementById('eventName').value.trim(); 
-            const p = document.getElementById('eventPlace').value.trim();
-            const nameParts = [];
-            if(d) nameParts.push(d);
-            if(n) nameParts.push(n);
-            if(p) nameParts.push(p);
-            
-            const baseName = nameParts.length > 0 ? nameParts.join("_") : "stage_plan";
+        function saveCombinedPDF() {
+            const { jsPDF } = window.jspdf;
+            // 何か描いてある図面を、1枚につきA4横1ページで書き出す
+            const targets = canvasList.filter(c => c.canvasObj.getObjects().length > 0);
+            if (targets.length === 0) return;
+            const pdf = new jsPDF('l', 'mm', 'a4');
+            targets.forEach((c, index) => {
+                if (index > 0) pdf.addPage('a4', 'l');
+                const mul = 1.5 / c.canvasObj.getZoom();
+                const imgData = c.canvasObj.toDataURL({ format: 'jpeg', quality: 0.85, multiplier: mul });
+                const pdfW = 297, pdfH = 210;
+                const ratio = Math.min(pdfW / BASE_WIDTH, pdfH / c.heightState) * 0.95;
+                const w = BASE_WIDTH * ratio;
+                const h = c.heightState * ratio;
+                pdf.addImage(imgData, 'JPEG', (pdfW - w) / 2, (pdfH - h) / 2, w, h);
+            });
+            const d = document.getElementById('eventDate').value;
+            const n = document.getElementById('eventName').value.trim();
+            const baseName = [d, n].filter(Boolean).join('_') || 'zumen';
             pdf.save(`${baseName}.pdf`);
-            // ▲▲▲ 変更ここまで ▲▲▲
         }
-        function saveCombinedJPG() { 
-            const targets = canvasList.filter(c => { const chk = document.getElementById('chk_' + c.id); return chk && chk.checked; }); 
-            if(targets.length === 0) return; 
-            
-            const GAP = 30; 
-            let totalH = 0; 
-            targets.forEach(c => totalH += c.heightState); 
-            if (targets.length > 1) { totalH += (targets.length - 1) * GAP; }
-            
-            const w = BASE_WIDTH; 
-            const comboCanvas = document.createElement('canvas'); 
-            comboCanvas.width = w; 
-            comboCanvas.height = totalH; 
-            const ctx = comboCanvas.getContext('2d'); 
-            ctx.fillStyle = '#ffffff'; 
-            ctx.fillRect(0, 0, w, totalH); 
-            
-            const promises = targets.map(c => { 
-                return new Promise(resolve => { 
-                    const img = new Image(); 
-                    img.onload = () => resolve({ img, h: c.heightState }); 
-                    const curZoom = c.canvasObj.getZoom(); 
-                    const targetMultiplier = 1.0 / curZoom; 
-                    img.src = c.canvasObj.toDataURL({ format: 'png', multiplier: targetMultiplier }); 
-                }); 
-            }); 
-            
-            Promise.all(promises).then(images => { 
-                let y = 0; 
-                images.forEach((item, index) => { 
-                    ctx.drawImage(item.img, 0, y, w, item.h); 
-                    y += item.h + GAP; 
-                }); 
-                
-                // ▼▼▼ 変更点: ファイル名生成ロジック ▼▼▼
-                const d = document.getElementById('eventDate').value; 
-                const n = document.getElementById('eventName').value.trim(); 
-                const p = document.getElementById('eventPlace').value.trim();
-                const nameParts = [];
-                if(d) nameParts.push(d);
-                if(n) nameParts.push(n);
-                if(p) nameParts.push(p);
-
-                const baseName = nameParts.length > 0 ? nameParts.join("_") : "stage_plan";
-                const fn = `${baseName}.jpg`;
-                // ▲▲▲ 変更ここまで ▲▲▲
-                
-                const a = document.createElement('a'); 
-                a.href = comboCanvas.toDataURL('image/jpeg', 0.9); 
-                a.download = fn; 
-                document.body.appendChild(a); a.click(); document.body.removeChild(a); 
-            }); 
-        }
-        
         function mirrorPaste() {
             const cvs = getActiveCanvas();
             const actObj = cvs.getActiveObject();
@@ -2834,6 +2760,14 @@
             date.type = 'date';
             date.className = 'sf day-date';
             date.value = (dayData && dayData.date) || suggestNextDate();
+            const dow = document.createElement('span');
+            dow.className = 'day-dow';
+            const updateDow = () => {
+                const d = new Date(date.value);
+                dow.textContent = isNaN(d) ? '' : '(' + '日月火水木金土'[d.getDay()] + ')';
+            };
+            date.addEventListener('input', updateDow);
+            updateDow();
             const del = document.createElement('button');
             del.type = 'button';
             del.className = 'day-del no-print';
@@ -2852,6 +2786,7 @@
             };
             head.appendChild(label);
             head.appendChild(date);
+            head.appendChild(dow);
             head.appendChild(del);
             block.appendChild(head);
 
@@ -3146,26 +3081,63 @@
             }
         }
 
-        // --- 画像貼り付け: 現在の内容をPNG化してページ上部に挿入 ---
+        // --- 画像貼り付け: タイムテーブル(日ごと)と図面(1枚ずつ)を個別画像で貼る ---
         async function notionPasteImage() {
             if (!notionEventId) return;
             setNotionStatus('⏳ 画像を作成中…');
             try {
-                const png = await buildNotionPng();
-                if (!png) throw new Error('画像の生成に失敗しました');
-                setNotionStatus('⏳ Notionに貼り付け中…');
+                switchView('sheet');
+                await new Promise(r => setTimeout(r, 300));
+                const images = [];
+
+                // 1) 日ごとのタイムテーブル・借用区分
+                for (const block of document.querySelectorAll('#daysContainer .day-block')) {
+                    // 内容が空の日はスキップ
+                    const hasText = [...block.querySelectorAll('.tt-cell')].some(ta => ta.value.trim());
+                    const hasKg = block.querySelector('.kg-cell.s1, .kg-cell.s2, .kg-cell.s3');
+                    if (!hasText && !hasKg) continue;
+
+                    let cap = 'タイムテーブル';
+                    const dateVal = block.querySelector('.day-date').value;
+                    if (dateVal) {
+                        const d = new Date(dateVal);
+                        if (!isNaN(d)) cap = `${d.getMonth() + 1}/${d.getDate()}(${'日月火水木金土'[d.getDay()]}) タイムテーブル`;
+                    }
+                    if (window.html2canvas) {
+                        const cv = await html2canvas(block, {
+                            scale: 1.5, backgroundColor: '#ffffff', logging: false,
+                            onclone: (doc) => prepareCaptureClone(doc)
+                        });
+                        images.push({ png: cv.toDataURL('image/png'), caption: cap });
+                    }
+                }
+
+                // 2) 図面1枚ずつ (何か描いてあるものだけ)
+                canvasList.forEach((c, i) => {
+                    if (c.canvasObj.getObjects().length === 0) return;
+                    try {
+                        const mul = 1.4 / c.canvasObj.getZoom();
+                        images.push({
+                            png: c.canvasObj.toDataURL({ format: 'png', multiplier: mul }),
+                            caption: c.title || ('図面' + (i + 1))
+                        });
+                    } catch (e) { console.warn('図面画像化失敗:', e); }
+                });
+
+                if (images.length === 0) throw new Error('貼り付ける内容がありません');
+                setNotionStatus(`⏳ ${images.length}枚をNotionに貼り付け中…`);
                 const res = await fetch(
                     `${NOTION_WORKER_URL}/image?id=${encodeURIComponent(notionEventId)}`,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', ...notionHeaders() },
-                        body: JSON.stringify({ png: png })
+                        body: JSON.stringify({ images: images })
                     }
                 );
                 const result = await res.json();
                 if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
                 console.log('画像貼り付け結果:', result);
-                setNotionStatus('✅ 貼り付けました → ' + (result.position || 'ページ上部'), true);
+                setNotionStatus(`✅ ${images.length}枚を貼り付けました`, true);
             } catch (e) {
                 console.error('画像貼り付けエラー:', e);
                 setNotionStatus('❌ 画像貼り付け失敗');
