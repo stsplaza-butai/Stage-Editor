@@ -452,6 +452,31 @@
         .tt-cell:focus { background: #f4f8fe; }
         .kg-cell.s3 { background: #fff59d; font-weight: bold; }
 
+        /* 日ブロック (タイムテーブル・借用区分) */
+        .day-block { margin-bottom: 10px; }
+        .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+        .day-label { font-size: 10px; color: #5a6b7c; font-weight: 600; }
+        .day-date { width: 130px; font-size: 12px; font-weight: 600; }
+        .day-del {
+            margin-left: auto; font-size: 9.5px; padding: 1px 8px; cursor: pointer;
+            border: 1px solid #d4dae0; border-radius: 3px; background: #fff; color: #97a3ae;
+        }
+        .day-del:hover { color: #c62828; border-color: #c62828; }
+
+        /* 図面リスト */
+        .draw-item { margin-bottom: 12px; }
+        .draw-item-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+        .draw-name { width: 240px; font-size: 12px; font-weight: 600; }
+        .draw-hint { font-size: 9.5px; color: #97a3ae; }
+
+        /* 追加ボタン */
+        .add-mini-btn {
+            font-size: 11px; padding: 4px 16px; cursor: pointer;
+            border: 1px dashed #b7c1ca; border-radius: 4px; background: #fff; color: #5a6b7c;
+            width: 100%;
+        }
+        .add-mini-btn:hover { border-style: solid; border-color: #1a73e8; color: #1a73e8; }
+
         /* 選択チップ (横断幕・懸垂・旗など) */
         .chip-wrap { flex: 1; display: flex; flex-wrap: wrap; gap: 3px; min-width: 0; }
         .sel-chip {
@@ -512,7 +537,7 @@
 <body>
 
     <header>
-        <div class="title">📋 舞台打合せ表エディター Ver4.0</div>
+        <div class="title">📋 タイムテーブル＆図面エディター Ver5.0</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 打合せ表</button>
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集</button>
@@ -526,105 +551,30 @@
             <button class="st-btn" onclick="printSheet()">🖨️ 印刷 / PDF</button>
             <span class="notion-only" style="display:none;">
                 <button class="st-btn st-primary" onclick="notionSave()">☁️ Notionに保存</button>
+                <button class="st-btn" onclick="notionPasteImage()" title="現在の内容を画像化してNotionページの上部に貼り付けます">🖼️ ページに画像を貼る</button>
                 <span class="notion-status" style="font-size:11px; color:#dfe6ec; margin-left:8px;"></span>
             </span>
             <span style="flex:1"></span>
             <span style="font-size:10.5px; color:#c8d2da;">図面サムネイルをクリックすると編集画面へ移動します</span>
         </div>
         <div id="sheetPage">
-            <div class="sh-head">
-                <div class="sh-brand">舞台打合せ表</div>
-                <div class="sh-head-main">
-                    <div class="sh-head-row">
-                        <div class="frow" style="margin-bottom:0;"><label style="width:auto;">利用日</label><input type="date" id="eventDate" class="sf sh-big" style="width:122px;"></div>
-                        <div class="frow" style="flex:1; margin-bottom:0;"><label style="width:auto;">会場</label><input id="eventPlace" class="sf" style="flex:1;"></div>
-                        <div class="frow" style="margin-bottom:0;"><label style="width:auto;">担当</label><input id="sf_tantou" class="sf" style="width:110px;"></div>
-                    </div>
-                    <div class="sh-head-row">
-                        <div class="frow" style="flex:1; margin-bottom:0;"><label style="width:auto;">主催者名</label><input id="sf_org" class="sf sh-big" style="flex:1;"><span class="sh-sama">様</span></div>
-                        <div class="frow" style="flex:1.15; margin-bottom:0;"><label style="width:auto;">催事名</label><input id="eventName" class="sf sh-big" style="flex:1;"></div>
-                    </div>
-                </div>
+            <!-- 打刻・保存用の隠しメタ情報 (Notionから自動設定される) -->
+            <div style="display:none;">
+                <input type="date" id="eventDate">
+                <input id="eventName">
+                <input id="eventPlace">
             </div>
-            <div class="sh-grid">
-                <div class="sh-top">
-                <div class="sh-col">
-                    <div class="sh-sec" style="--sec:#23425f;">
-                        <h4>タイムテーブル・借用区分</h4>
-                        <table class="kgtt">
-                            <thead><tr><th class="c-k">区</th><th class="c-h">時</th><th>内容</th><th class="c-r">ホ</th><th class="c-r">多</th><th class="c-r">A</th><th class="c-r">B</th><th class="c-r">C</th><th class="c-r">D</th></tr></thead>
-                            <tbody id="kgttBody"></tbody>
-                        </table>
-                        <div class="kg-legend no-print"><span class="kg-cell s1" style="cursor:default;">通</span> 通常　<span class="kg-cell s2" style="cursor:default;">倍</span> 倍額　<span class="kg-cell s3" style="cursor:default;">直</span> 直前割 — 部屋のセルをクリックで切替</div>
-                    </div>
-                    </div>
-                    <div class="sh-col">
-                    <div class="sh-sec" style="--sec:#23425f;">
-                        <h4>搬入</h4>
-                        <textarea id="sf_hannyu" class="sf" rows="2" placeholder="搬入内容・時間・車両など"></textarea>
-                    </div>
-                    <div class="sh-sec" style="--sec:#23425f;">
-                        <h4>基本情報</h4>
-                        <div class="frow"><label>ジャンル</label><input id="sf_genre" class="sf"></div>
-                        <div class="frow"><label>客席の形状</label><select id="sf_seat" class="sf"><option value=""></option><option>シアター</option><option>平土間</option><option>スクール</option><option>その他</option></select></div>
-                        <div class="frow"><label>舞台の形状</label><input id="sf_stageShape" class="sf" placeholder="反響板・スクリーン等"></div>
-                        <div class="frow"><label>出演者数</label><input id="sf_performers" class="sf"><label style="width:auto;">入場者数</label><input id="sf_audience" class="sf"></div>
-                        <div class="frow"><label>ピアノ</label><input id="sf_piano" class="sf" placeholder="使用・調律の有無など"></div>
-                    </div>
-                    <div class="sh-sec" style="--sec:#7c3aed;">
-                        <h4>映像</h4>
-                        <div class="frow"><label>プロジェクター</label><input id="sf_projector" class="sf"></div>
-                        <div class="frow"><label>メモ</label><input id="sf_videoNote" class="sf"></div>
-                    </div>
-                    <div class="sh-sec" style="--sec:#2f855a;">
-                        <h4>表周り・その他</h4>
-                        <div class="frow"><label>２階案内板</label><input id="sf_floor2" class="sf"></div>
-                        <div class="frow"><label>空調</label><input id="sf_aircon" class="sf"></div>
-                        <div class="frow"><label>ホワイエ</label><input id="sf_foyer" class="sf"></div>
-                        <div class="frow"><label>メモ</label><input id="sf_omoteNote" class="sf"><label class="chk-label" style="width:auto;"><input type="checkbox" id="sf_chuui"> 注意事項説明済</label></div>
-                    </div>
-
-                    </div>
-                </div>
-                <div class="sh-col sh-col-bands">
-                    <div class="band" style="--sec:#e2711d;">
-                        <h4>舞台</h4>
-                        <div class="band-body">
-                            <div class="band-fields">
-                                <div class="frow"><label>緞帳</label><select id="sf_donchou" class="sf" style="flex:0 0 90px;"><option value=""></option><option>あり</option><option>なし</option></select></div>
-                                <div class="frow" style="align-items:flex-start;"><label style="padding-top:3px;">横断幕・懸垂・旗</label><div class="chip-wrap" id="kanbanChips"></div></div>
-                                <div class="frow"><label>吊り物</label><input id="sf_tsurimono" class="sf"></div>
-                                <div class="frow"><label>ひな壇</label><input id="sf_hinadan" class="sf"></div>
-                                <textarea id="sf_stageNote" class="sf band-ta" placeholder="舞台メモ"></textarea>
-                            </div>
-                            <div class="band-thumb" id="bandThumb0"></div>
-                        </div>
-                    </div>
-                    <div class="band" style="--sec:#1a5fb4;">
-                        <h4>音響</h4>
-                        <div class="band-body">
-                            <div class="band-fields">
-                                <textarea id="sf_soundNote" class="sf band-ta" placeholder="音響メモ"></textarea>
-                            </div>
-                            <div class="band-thumb" id="bandThumb1"></div>
-                        </div>
-                    </div>
-                    <div class="band" style="--sec:#c99700;">
-                        <h4>照明</h4>
-                        <div class="band-body">
-                            <div class="band-fields">
-                                <textarea id="sf_lighting" class="sf band-ta" placeholder="照明メモ"></textarea>
-                            </div>
-                            <div class="band-thumb" id="bandThumb2"></div>
-                        </div>
-                    </div>
-                    <div class="sh-sec sh-sec-grow" style="--sec:#c62828; margin-top:6px; margin-bottom:0;">
-                        <h4>特記事項・備考</h4>
-                        <textarea id="sf_tokki" class="sf sh-ta-grow"></textarea>
-                    </div>
-                </div>
+            <div class="sh-sec" style="--sec:#23425f;">
+                <h4>タイムテーブル・借用区分</h4>
+                <div id="daysContainer"></div>
+                <div class="kg-legend no-print"><span class="kg-cell s1" style="cursor:default;">通</span> 通常　<span class="kg-cell s2" style="cursor:default;">倍</span> 倍額　<span class="kg-cell s3" style="cursor:default;">直</span> 直前割 — 部屋のセルをクリックで切替</div>
+                <div class="no-print" style="margin-top:4px;"><button type="button" class="add-mini-btn" onclick="addDay()">＋ 日を追加</button></div>
             </div>
-            <div id="propsStrip" class="sh-props" style="display:none;"></div>
+            <div class="sh-sec" style="--sec:#23425f; margin-top:12px;">
+                <h4>図面</h4>
+                <div id="drawList"></div>
+                <div class="no-print" style="margin-top:6px;"><button type="button" class="add-mini-btn" onclick="sheetAddDrawing()">＋ 図面を追加</button></div>
+            </div>
         </div>
     </div>
     <!-- ============ /打合せ表ビュー ============ -->
@@ -955,7 +905,7 @@
         };
 
         function createDefaultCanvases() {
-            DEPT_NAMES.forEach(n => addNewCanvasBlock(n));
+            ['図面1', '図面2', '図面3'].forEach(n => addNewCanvasBlock(n));
             activateCanvas(canvasList[0].id);
         }
 
@@ -1050,7 +1000,7 @@
         let canvasSeq = 0;
         function addNewCanvasBlock(title = '新規図面') {
             const id = 'canvas_' + Date.now() + '_' + (canvasSeq++);
-            const deletable = canvasList.length >= 3; // 舞台図・音響図・照明図は削除不可
+            const deletable = true;
             const container = document.getElementById('canvasContainer');
             const addBtnContainer = container.querySelector('div[style*="display:flex"]');
 
@@ -2325,7 +2275,7 @@
             arr.forEach((data, i) => {
                 // 1. データに合わせて「箱（キャンバス）」を作る
                 // (旧バージョンの「打合せ表」データも通常キャンバスとして復元する)
-                addNewCanvasBlock(data.title || DEPT_NAMES[i] || ('図面' + (i + 1)));
+                addNewCanvasBlock(data.title || ('図面' + (i + 1)));
 
                 // 今作ったばかりのキャンバスを取得
                 const currentData = canvasList[canvasList.length - 1];
@@ -2811,15 +2761,6 @@
         // ===== 打合せ表 (シートビュー) =====
         // ================================================================
 
-        const SHEET_FIELDS = [
-            'sf_org','sf_tantou','sf_genre','sf_seat','sf_stageShape','sf_performers','sf_audience',
-            'sf_hannyu','sf_donchou','sf_tsurimono','sf_hinadan','sf_piano','sf_stageNote',
-            'sf_lighting','sf_soundNote',
-            'sf_projector','sf_videoNote','sf_floor2','sf_aircon','sf_foyer','sf_omoteNote','sf_tokki'
-        ];
-        const KANBAN_ITEMS = ['横断幕','懸垂幕','プラザ枠','紙持込','業者施工','プラザ国旗','旗持込'];
-
-        const DEPT_NAMES = ['舞台図', '音響図', '照明図'];
         const KG_ROOMS = ['ホール', '多目的室', '会議室A', '会議室B', '会議室C', '会議室D'];
         const KG_PERIODS = [
             { name: '前', hours: [8] },
@@ -2832,34 +2773,91 @@
         function initMeetingSheet() {
             const place = document.getElementById('eventPlace');
             if (!place.value) place.value = 'くまもと森都心プラザ ホール';
-            buildKgtt();
-            buildKanbanChips();
-            // シート内のあらゆる入力を未保存フラグに繋ぐ
+            populateDays(null);
             document.getElementById('sheetPage').addEventListener('input', markUnsaved);
         }
 
-        // --- 横断幕・懸垂・旗チップ ---
-        function buildKanbanChips() {
-            const wrap = document.getElementById('kanbanChips');
-            wrap.innerHTML = '';
-            KANBAN_ITEMS.forEach(item => {
-                const b = document.createElement('button');
-                b.type = 'button';
-                b.className = 'sel-chip';
-                b.dataset.k = item;
-                b.textContent = item;
-                b.onclick = () => { b.classList.toggle('on'); markUnsaved(); };
-                wrap.appendChild(b);
-            });
+        function switchView(v) {
+            const isSheet = (v === 'sheet');
+            document.body.classList.toggle('sheet-mode', isSheet);
+            document.getElementById('tabSheet').classList.toggle('active', isSheet);
+            document.getElementById('tabDraw').classList.toggle('active', !isSheet);
+            if (isSheet) {
+                refreshSheetThumbs();
+            } else {
+                canvasList.forEach(c => c.canvasObj.requestRenderAll());
+            }
         }
 
-        // --- 借用区分グリッド (クリックで 空欄→通常→倍額→空欄) ---
-        // --- 借用区分・タイムテーブル合体表 ---
-        // 行=8〜22時、区分(前延長/午前/午後/夜間)で色分け。
-        // 部屋列は区分単位の縦長セルで、クリックで 空欄→通常→倍額→直前割→空欄。
-        function buildKgtt() {
-            const tbody = document.getElementById('kgttBody');
-            tbody.innerHTML = '';
+        // ===== 日ごとのタイムテーブル・借用区分 =====
+        function addDay(dayData) {
+            const container = document.getElementById('daysContainer');
+            const block = document.createElement('div');
+            block.className = 'day-block';
+
+            const head = document.createElement('div');
+            head.className = 'day-head';
+            const label = document.createElement('span');
+            label.className = 'day-label';
+            label.textContent = '📅 利用日';
+            const date = document.createElement('input');
+            date.type = 'date';
+            date.className = 'sf day-date';
+            date.value = (dayData && dayData.date) || suggestNextDate();
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'day-del no-print';
+            del.textContent = '✕ この日を削除';
+            del.onclick = () => {
+                if (!del.dataset.arm) {
+                    del.dataset.arm = '1';
+                    del.textContent = '❗ もう一度押すと削除';
+                    setTimeout(() => {
+                        if (del.isConnected) { delete del.dataset.arm; del.textContent = '✕ この日を削除'; }
+                    }, 3000);
+                    return;
+                }
+                block.remove();
+                markUnsaved();
+            };
+            head.appendChild(label);
+            head.appendChild(date);
+            head.appendChild(del);
+            block.appendChild(head);
+
+            const table = document.createElement('table');
+            table.className = 'kgtt';
+            table.innerHTML = '<thead><tr><th class="c-k">区</th><th class="c-h">時</th><th>内容</th><th class="c-r">ホ</th><th class="c-r">多</th><th class="c-r">A</th><th class="c-r">B</th><th class="c-r">C</th><th class="c-r">D</th></tr></thead><tbody></tbody>';
+            buildKgttInto(table.querySelector('tbody'));
+            block.appendChild(table);
+            container.appendChild(block);
+
+            if (dayData) {
+                const cellsByH = {};
+                block.querySelectorAll('.tt-cell').forEach(ta => cellsByH[ta.dataset.h] = ta);
+                (dayData.timetable || []).forEach(o => {
+                    if (o && cellsByH[o.h]) cellsByH[o.h].value = o.text || '';
+                });
+                block.querySelectorAll('.kg-cell').forEach(td => {
+                    const st = ((dayData.kubunGrid || [])[td.dataset.r] || [])[td.dataset.c] || '';
+                    setKgState(td, st);
+                });
+            }
+            block.querySelectorAll('.tt-cell').forEach(ttAutoGrow);
+            return block;
+        }
+
+        // 新しい日の初期値: 既存の最終日の翌日、無ければNotionの利用日
+        function suggestNextDate() {
+            const dates = [...document.querySelectorAll('.day-date')].map(i => i.value).filter(Boolean);
+            if (dates.length) {
+                const d = new Date(dates[dates.length - 1]);
+                if (!isNaN(d)) { d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); }
+            }
+            return document.getElementById('eventDate').value || '';
+        }
+
+        function buildKgttInto(tbody) {
             KG_PERIODS.forEach((p, pi) => {
                 p.hours.forEach((h, hi) => {
                     const tr = document.createElement('tr');
@@ -2913,108 +2911,44 @@
             markUnsaved();
         }
 
-        function collectKubunGrid() {
-            return KG_ROOMS.map((room, r) =>
-                [...document.querySelectorAll(`#kgttBody .kg-cell[data-r="${r}"]`)]
-                    .sort((a, b) => a.dataset.c - b.dataset.c)
-                    .map(td => td.classList.contains('s3') ? '直前割' : td.classList.contains('s2') ? '倍額' : td.classList.contains('s1') ? '通常' : '')
-            );
-        }
-
-        function populateKubunGrid(grid) {
-            buildKgtt();
-            if (!grid) return;
-            document.querySelectorAll('#kgttBody .kg-cell').forEach(td => {
-                const s = (grid[td.dataset.r] || [])[td.dataset.c] || '';
-                setKgState(td, s);
-            });
-        }
-
-        function switchView(v) {
-            const isSheet = (v === 'sheet');
-            document.body.classList.toggle('sheet-mode', isSheet);
-            document.getElementById('tabSheet').classList.toggle('active', isSheet);
-            document.getElementById('tabDraw').classList.toggle('active', !isSheet);
-            if (isSheet) {
-                refreshSheetThumbs();
-            } else {
-                canvasList.forEach(c => c.canvasObj.requestRenderAll());
-            }
-        }
-
-        // --- タイムテーブル (時間スロット式) ---
         function ttAutoGrow(ta) {
             ta.style.height = 'auto';
             ta.style.height = Math.max(17, ta.scrollHeight) + 'px';
         }
 
-        function collectTimetable() {
-            return [...document.querySelectorAll('#kgttBody .tt-cell')]
-                .map(ta => ({ h: Number(ta.dataset.h), text: ta.value.replace(/\s+$/, '') }))
-                .filter(o => o.text.trim() !== '');
+        function collectDays() {
+            return [...document.querySelectorAll('#daysContainer .day-block')].map(block => ({
+                date: block.querySelector('.day-date').value,
+                timetable: [...block.querySelectorAll('.tt-cell')]
+                    .map(ta => ({ h: Number(ta.dataset.h), text: ta.value.replace(/\s+$/, '') }))
+                    .filter(o => o.text.trim() !== ''),
+                kubunGrid: KG_ROOMS.map((room, r) =>
+                    [...block.querySelectorAll(`.kg-cell[data-r="${r}"]`)]
+                        .sort((a, b) => a.dataset.c - b.dataset.c)
+                        .map(td => td.classList.contains('s3') ? '直前割' : td.classList.contains('s2') ? '倍額' : td.classList.contains('s1') ? '通常' : '')
+                )
+            }));
         }
 
-        function populateTimetable(arr) {
-            if (document.getElementById('kgttBody').children.length === 0) buildKgtt();
-            const cells = {};
-            document.querySelectorAll('#kgttBody .tt-cell').forEach(ta => {
-                ta.value = '';
-                cells[ta.dataset.h] = ta;
-            });
-            (arr || []).forEach(o => {
-                if (o && typeof o.h === 'number' && cells[o.h]) {
-                    // 新形式 {h, text}
-                    cells[o.h].value = o.text || '';
-                } else if (o && (o.t !== undefined || o.l !== undefined)) {
-                    // 旧形式 {t, l} からの移行: 時刻の先頭数字で振り分け
-                    const hour = parseInt(String(o.t || '').match(/\d{1,2}/)?.[0], 10);
-                    if (cells[hour] && (o.t || o.l)) {
-                        const line = [o.t, o.l].filter(Boolean).join(' ');
-                        cells[hour].value += (cells[hour].value ? '\n' : '') + line;
-                    }
-                }
-            });
-            document.querySelectorAll('#kgttBody .tt-cell').forEach(ttAutoGrow);
+        function populateDays(arr) {
+            document.getElementById('daysContainer').innerHTML = '';
+            if (arr && arr.length) {
+                arr.forEach(d => addDay(d));
+            } else {
+                addDay({ date: document.getElementById('eventDate').value || '' });
+            }
         }
 
-        // --- シート項目の収集・復元 ---
-        function collectSheet() {
-            const obj = {};
-            SHEET_FIELDS.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) obj[id.replace('sf_', '')] = el.value;
-            });
-            obj.chuui = document.getElementById('sf_chuui').checked;
-            obj.kubunGrid = collectKubunGrid();
-            obj.kanban = [...document.querySelectorAll('#kanbanChips .sel-chip.on')].map(b => b.dataset.k);
-            return obj;
-        }
-
-        function populateSheet(obj) {
-            obj = obj || {};
-            SHEET_FIELDS.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = obj[id.replace('sf_', '')] || '';
-            });
-            document.getElementById('sf_chuui').checked = !!obj.chuui;
-            populateKubunGrid(obj.kubunGrid || null);
-            const kanban = Array.isArray(obj.kanban) ? obj.kanban : [];
-            document.querySelectorAll('#kanbanChips .sel-chip').forEach(b => {
-                b.classList.toggle('on', kanban.includes(b.dataset.k));
-            });
-        }
-
-        // --- 保存データの組み立て (JSONローカル保存・自動保存・Notion保存で共通) ---
+        // ===== 保存データの組み立て =====
         function buildSaveData() {
             return {
-                version: "4.0",
+                version: "5.0",
                 meta: {
                     date: document.getElementById('eventDate').value,
                     title: document.getElementById('eventName').value.trim(),
                     place: document.getElementById('eventPlace').value.trim()
                 },
-                sheet: collectSheet(),
-                timetable: collectTimetable(),
+                days: collectDays(),
                 data: canvasList.map(c => ({
                     title: c.title || '',
                     height: c.heightState,
@@ -3023,49 +2957,75 @@
             };
         }
 
-        // --- 読み込みデータからシート・タイムテーブルを復元 (v3以前のデータなら空になる) ---
+        // 読み込みデータから日別テーブルを復元 (v4形式は1日分として変換)
         function applyExtras(content) {
-            populateSheet(content.sheet || {});
-            populateTimetable(content.timetable || null);
-            // キャンバス復元(非同期)を待ってからサムネイル更新
+            let days = content.days;
+            if (!days && (content.timetable || (content.sheet && content.sheet.kubunGrid))) {
+                days = [{
+                    date: (content.meta && content.meta.date) || '',
+                    timetable: content.timetable || [],
+                    kubunGrid: (content.sheet && content.sheet.kubunGrid) || null
+                }];
+            }
+            populateDays(days || null);
             setTimeout(refreshSheetThumbs, 800);
         }
 
-        // --- 図面サムネイル (部署バンドの右側に表示) ---
+        // ===== 図面リスト =====
         function refreshSheetThumbs() {
-            DEPT_NAMES.forEach((name, i) => {
-                const box = document.getElementById('bandThumb' + i);
-                if (!box) return;
-                box.innerHTML = '';
-                const c = canvasList[i];
-                if (!c) {
-                    const d = document.createElement('div');
-                    d.className = 'ds-empty';
-                    d.textContent = `＋ ${name}を描く`;
-                    d.onclick = () => createDeptCanvas(i);
-                    box.appendChild(d);
-                    return;
-                }
+            const list = document.getElementById('drawList');
+            if (!list) return;
+            list.innerHTML = '';
+            if (canvasList.length === 0) {
+                const d = document.createElement('div');
+                d.className = 'ds-empty';
+                d.style.minHeight = '80px';
+                d.textContent = '図面がありません。「＋ 図面を追加」で作成できます';
+                list.appendChild(d);
+                return;
+            }
+            canvasList.forEach((c, i) => {
+                const item = document.createElement('div');
+                item.className = 'draw-item';
+                const head = document.createElement('div');
+                head.className = 'draw-item-head';
+                const name = document.createElement('input');
+                name.className = 'sf draw-name';
+                name.value = c.title || ('図面' + (i + 1));
+                name.oninput = () => updateDrawTitle(c.id, name.value);
+                const hint = document.createElement('span');
+                hint.className = 'draw-hint no-print';
+                hint.textContent = '(図面クリックで編集)';
+                head.appendChild(name);
+                head.appendChild(hint);
                 const slot = document.createElement('div');
                 slot.className = 'draw-slot';
-                slot.title = name + ' (クリックで編集)';
                 slot.onclick = () => openDrawing(c.id);
                 const img = document.createElement('img');
                 try {
-                    const mul = 0.5 / c.canvasObj.getZoom();
+                    const mul = 0.92 / c.canvasObj.getZoom();
                     img.src = c.canvasObj.toDataURL({ format: 'png', multiplier: mul });
                 } catch (e) { console.warn('サムネイル生成失敗:', e); }
                 slot.appendChild(img);
-                box.appendChild(slot);
+                item.appendChild(head);
+                item.appendChild(slot);
+                list.appendChild(item);
             });
         }
 
-        // 部署の図面キャンバスが無ければ作ってから編集画面へ
-        function createDeptCanvas(i) {
-            while (canvasList.length <= i) {
-                addNewCanvasBlock(DEPT_NAMES[canvasList.length] || ('図面' + (canvasList.length + 1)));
-            }
-            openDrawing(canvasList[i].id);
+        // シート側で図面名を編集 → 図面編集モードのラベルにも反映
+        function updateDrawTitle(id, value) {
+            const c = getCanvasData(id);
+            if (!c) return;
+            c.title = value;
+            const label = c.blockElement.querySelector('.block-label');
+            if (label) label.textContent = value || '図面';
+            markUnsaved();
+        }
+
+        function sheetAddDrawing() {
+            addNewCanvasBlock('図面' + (canvasList.length + 1));
+            refreshSheetThumbs();
         }
 
         function openDrawing(id) {
@@ -3130,36 +3090,42 @@
             setTimeout(() => window.print(), 500);
         }
 
-        // --- Notionプロパティの反映 (催事名などはNotionが正) ---
+        // --- Notionプロパティの反映 (打刻用の隠しメタ情報と日付初期値) ---
         function applyNotionProps(props) {
             if (props['催事名']) document.getElementById('eventName').value = props['催事名'];
-            if (props['主催者名']) document.getElementById('sf_org').value = props['主催者名'];
-            if (props['担当']) document.getElementById('sf_tantou').value = props['担当'];
-            // 予定タイトル (例: 2026/9/6_9:00-22:00@催事名) から利用日を抽出
             const titleText = props['予定タイトル'] || props['Name'] || '';
             const m = titleText.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
-            if (m && !document.getElementById('eventDate').value) {
-                document.getElementById('eventDate').value =
-                    `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+            if (m) {
+                const iso = `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+                document.getElementById('eventDate').value = iso;
+                // 日付未入力の日ブロックに反映
+                document.querySelectorAll('.day-date').forEach(inp => { if (!inp.value) inp.value = iso; });
             }
-            renderPropsStrip(props);
         }
 
-        function renderPropsStrip(props) {
-            const KEYS = ['前延長', '搬入口使用願', '立看板申請', '飲食届', 'ｽﾓｰｸ使用', '禁止行為解除申請', '打合せ状況'];
-            const strip = document.getElementById('propsStrip');
-            strip.innerHTML = '<span class="props-title">申請・状況 (Notion管理)</span>';
-            let shown = 0;
-            KEYS.forEach(k => {
-                if (!(k in props)) return;
-                const v = props[k] || 'ー';
-                const chip = document.createElement('span');
-                chip.className = 'prop-chip' + ((v !== 'ー' && v !== 'なし' && v !== '不要') ? ' warn' : '');
-                chip.textContent = `${k}: ${v}`;
-                strip.appendChild(chip);
-                shown++;
-            });
-            strip.style.display = shown > 0 ? 'flex' : 'none';
+        // --- 画像貼り付け: 現在の内容をPNG化してページ上部に挿入 ---
+        async function notionPasteImage() {
+            if (!notionEventId) return;
+            setNotionStatus('⏳ 画像を作成中…');
+            try {
+                const png = await buildNotionPng();
+                if (!png) throw new Error('画像の生成に失敗しました');
+                setNotionStatus('⏳ Notionに貼り付け中…');
+                const res = await fetch(
+                    `${NOTION_WORKER_URL}/image?id=${encodeURIComponent(notionEventId)}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...notionHeaders() },
+                        body: JSON.stringify({ png: png })
+                    }
+                );
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+                setNotionStatus('✅ ページ上部に画像を貼り付けました ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}), true);
+            } catch (e) {
+                console.error('画像貼り付けエラー:', e);
+                setNotionStatus('❌ 画像貼り付け失敗');
+            }
         }
 
         // --- Notion保存用PNG: シート全体をキャプチャ (html2canvasが無ければ図面連結で代替) ---
@@ -3368,14 +3334,13 @@
 
             try {
                 const dataToSave = buildSaveData();
-                const png = await buildNotionPng();
 
                 const res = await fetch(
                     `${NOTION_WORKER_URL}/save?id=${encodeURIComponent(notionEventId)}`,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', ...notionHeaders() },
-                        body: JSON.stringify({ drawing: dataToSave, png: png })
+                        body: JSON.stringify({ drawing: dataToSave })
                     }
                 );
                 const result = await res.json();
