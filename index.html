@@ -279,7 +279,7 @@
         .st-btn.st-primary:hover { background: #2c80f0; }
 
         #sheetPage {
-            width: 794px; min-height: 1123px; margin: 0 auto;
+            width: 724px; min-height: 400px; margin: 0 auto;
             background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.35);
             padding: 12px 14px 10px; box-sizing: border-box;
             display: flex; flex-direction: column;
@@ -452,6 +452,18 @@
         .tt-cell:focus { background: #f4f8fe; }
         .kg-cell.s3 { background: #fff59d; font-weight: bold; }
 
+        /* 集中編集モード */
+        body.focus-draw .canvas-block { display: none; }
+        body.focus-draw .canvas-block.focused { display: block; }
+        body.focus-draw .add-canvas-btn { display: none !important; }
+        .focus-back {
+            position: fixed; right: 18px; bottom: 18px; z-index: 999;
+            padding: 10px 20px; font-size: 13px; font-weight: bold;
+            background: #1a73e8; color: #fff; border: none; border-radius: 24px;
+            box-shadow: 0 4px 14px rgba(0,0,0,.35); cursor: pointer;
+        }
+        .focus-back:hover { background: #2c80f0; }
+
         /* 日ブロック (タイムテーブル・借用区分) */
         .day-block { margin-bottom: 10px; }
         .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
@@ -540,7 +552,7 @@
         <div class="title">📋 タイムテーブル＆図面エディター Ver5.0</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 打合せ表</button>
-            <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集</button>
+            <button id="tabDraw" class="tab-btn" onclick="document.body.classList.remove('focus-draw'); canvasList.forEach(c => c.blockElement.classList.remove('focused')); const fb=document.getElementById('focusBackBtn'); if(fb) fb.style.display='none'; switchView('draw');">🎨 図面編集</button>
         </div>
         <span style="flex:1"></span>
     </header>
@@ -578,6 +590,7 @@
         </div>
     </div>
     <!-- ============ /打合せ表ビュー ============ -->
+    <button id="focusBackBtn" class="focus-back" onclick="exitFocusDraw()" style="display:none;">✅ 編集おわり — 打合せ表へ戻る</button>
 
     <div class="toolbar-row top-toolbar">
         <div class="toolbar-group">
@@ -3030,11 +3043,24 @@
 
         function openDrawing(id) {
             switchView('draw');
+            // 集中編集モード: 選んだ図面だけを表示する
+            document.body.classList.add('focus-draw');
+            canvasList.forEach(c => c.blockElement.classList.toggle('focused', c.id === id));
+            const fb = document.getElementById('focusBackBtn');
+            if (fb) fb.style.display = 'block';
             setTimeout(() => {
                 activateCanvas(id);
                 const block = document.getElementById('block_' + id);
                 if (block) block.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 60);
+        }
+
+        function exitFocusDraw() {
+            document.body.classList.remove('focus-draw');
+            canvasList.forEach(c => c.blockElement.classList.remove('focused'));
+            const fb = document.getElementById('focusBackBtn');
+            if (fb) fb.style.display = 'none';
+            switchView('sheet');
         }
 
         // --- 印刷 ---
@@ -3121,7 +3147,8 @@
                 );
                 const result = await res.json();
                 if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
-                setNotionStatus('✅ ページ上部に画像を貼り付けました ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}), true);
+                console.log('画像貼り付け結果:', result);
+                setNotionStatus('✅ 貼り付けました → ' + (result.position || 'ページ上部'), true);
             } catch (e) {
                 console.error('画像貼り付けエラー:', e);
                 setNotionStatus('❌ 画像貼り付け失敗');
