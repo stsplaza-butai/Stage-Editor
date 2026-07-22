@@ -480,9 +480,12 @@
         /* 日ブロック (タイムテーブル・借用区分) */
         .day-block { margin-bottom: 10px; }
         .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-        .day-label { font-size: 10px; color: #5a6b7c; font-weight: 600; }
-        .day-date { width: 130px; font-size: 12px; font-weight: 600; }
-        .day-dow { font-size: 12px; font-weight: 600; color: #3c4c5c; }
+        .day-date-wrap { position: relative; display: inline-block; }
+        .day-date { width: 152px; font-size: 12px; font-weight: 600; }
+        .day-dow {
+            position: absolute; left: 99px; top: 50%; transform: translateY(-50%);
+            pointer-events: none; font-size: 12px; font-weight: 600; color: #3c4c5c;
+        }
         .day-del {
             margin-left: auto; font-size: 9.5px; padding: 1px 8px; cursor: pointer;
             border: 1px solid #d4dae0; border-radius: 3px; background: #fff; color: #97a3ae;
@@ -494,6 +497,13 @@
         .draw-item-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
         .draw-name { width: 240px; font-size: 12px; font-weight: 600; }
         .draw-hint { font-size: 9.5px; color: #97a3ae; }
+        .draw-ops { margin-left: auto; display: inline-flex; gap: 4px; }
+        .draw-op {
+            font-size: 9.5px; padding: 1px 8px; cursor: pointer;
+            border: 1px solid #d4dae0; border-radius: 3px; background: #fff; color: #5a6b7c;
+        }
+        .draw-op:hover:not(:disabled) { border-color: #1a73e8; color: #1a73e8; }
+        .draw-op:disabled { opacity: .35; cursor: default; }
 
         /* 追加ボタン */
         .add-mini-btn {
@@ -565,8 +575,8 @@
     <header>
         <div class="title">📋 タイムテーブル＆図面エディター Ver5.0</div>
         <div class="view-tabs">
-            <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 打合せ表</button>
-            <button id="tabDraw" class="tab-btn" onclick="document.body.classList.remove('focus-draw'); canvasList.forEach(c => c.blockElement.classList.remove('focused')); const fb=document.getElementById('focusBackBtn'); if(fb) fb.style.display='none'; switchView('draw');">🎨 図面編集</button>
+            <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
+            <button id="tabDraw" class="tab-btn" onclick="document.body.classList.remove('focus-draw'); canvasList.forEach(c => c.blockElement.classList.remove('focused')); const fb=document.getElementById('focusBackBtn'); if(fb) fb.style.display='none'; switchView('draw');">🎨 図面編集モード</button>
         </div>
         <span style="flex:1"></span>
     </header>
@@ -575,7 +585,7 @@
     <div id="sheetView">
         <div class="sheet-toolbar">
             <span class="notion-only" style="display:none;">
-                <button class="st-btn st-primary" onclick="notionSave()">☁️ Notionに保存</button>
+                <button class="st-btn st-primary" id="notionSaveBtn" onclick="notionSave()">☁️ Notionに保存</button>
                 <button class="st-btn" onclick="notionPasteImage()" title="現在の内容を画像化してNotionページの上部に貼り付けます">🖼️ ページに画像を貼る</button>
                 <span class="notion-status" style="font-size:11px; color:#dfe6ec; margin-left:8px;"></span>
             </span>
@@ -594,9 +604,10 @@
                 <input id="eventPlace">
             </div>
             <div class="sh-sec" style="--sec:#23425f;">
+                <div class="no-print" style="margin-bottom:4px;"><button type="button" class="add-mini-btn" onclick="addDayBefore()">＋ 前日を追加</button></div>
                 <div id="daysContainer"></div>
                 <div class="kg-legend no-print"><span class="kg-cell s1" style="cursor:default;">通</span> 通常　<span class="kg-cell s2" style="cursor:default;">倍</span> 倍額　<span class="kg-cell s3" style="cursor:default;">直</span> 直前割 — 部屋のセルをクリックで切替</div>
-                <div class="no-print" style="margin-top:4px;"><button type="button" class="add-mini-btn" onclick="addDay()">＋ 日を追加</button></div>
+                <div class="no-print" style="margin-top:4px;"><button type="button" class="add-mini-btn" onclick="addDay(); markUnsaved();">＋ 翌日を追加</button></div>
             </div>
             <div class="sh-sec" style="--sec:#23425f; margin-top:12px;">
                 <div id="drawList"></div>
@@ -605,7 +616,7 @@
         </div>
     </div>
     <!-- ============ /打合せ表ビュー ============ -->
-    <button id="focusBackBtn" class="focus-back" onclick="exitFocusDraw()" style="display:none;">✅ 編集おわり — 打合せ表へ戻る</button>
+    <button id="focusBackBtn" class="focus-back" onclick="exitFocusDraw()" style="display:none;">✅ 編集おわり — 戻る</button>
 
     <div class="toolbar-row top-toolbar">
         <div class="toolbar-group">
@@ -614,11 +625,6 @@
             <button onclick="document.getElementById('jsonInput').click()">読込</button>
             <button onclick="loadFromAutoSave()" class="btn-resume" title="前回の作業内容を復元">📂 再開</button>
             <input type="file" id="jsonInput" accept=".json" onchange="loadJSON(this)" style="display:none">
-        </div>
-        <div class="toolbar-group" id="notionGroup" style="display:none;">
-            <span class="group-label">Notion</span>
-            <button onclick="notionSave()" class="btn-blue" id="notionSaveBtn">☁️ Notionに保存</button>
-            <span id="notionStatus" style="font-size:10px; color:#455a64; white-space:nowrap;"></span>
         </div>
         <div class="toolbar-group">
             <span class="group-label">書出し</span>
@@ -2344,7 +2350,14 @@
             const d = document.getElementById('eventDate').value;
             const n = document.getElementById('eventName').value.trim();
             const baseName = [d, n].filter(Boolean).join('_') || 'zumen';
-            pdf.save(`${baseName}.pdf`);
+            if (window.self !== window.top) {
+                // Notion埋め込み内ではダウンロードがブロックされるため、新しいタブでPDFを開く
+                const blobUrl = pdf.output('bloburl');
+                const win = window.open(blobUrl, '_blank');
+                if (!win) pdf.save(`${baseName}.pdf`); // ポップアップブロック時の保険
+            } else {
+                pdf.save(`${baseName}.pdf`);
+            }
         }
         function mirrorPaste() {
             const cvs = getActiveCanvas();
@@ -2753,9 +2766,8 @@
 
             const head = document.createElement('div');
             head.className = 'day-head';
-            const label = document.createElement('span');
-            label.className = 'day-label';
-            label.textContent = '📅 利用日';
+            const dateWrap = document.createElement('span');
+            dateWrap.className = 'day-date-wrap';
             const date = document.createElement('input');
             date.type = 'date';
             date.className = 'sf day-date';
@@ -2784,9 +2796,9 @@
                 block.remove();
                 markUnsaved();
             };
-            head.appendChild(label);
-            head.appendChild(date);
-            head.appendChild(dow);
+            dateWrap.appendChild(date);
+            dateWrap.appendChild(dow);
+            head.appendChild(dateWrap);
             head.appendChild(del);
             block.appendChild(head);
 
@@ -2810,6 +2822,19 @@
             }
             block.querySelectorAll('.tt-cell').forEach(ttAutoGrow);
             return block;
+        }
+
+        // 先頭に前日を追加
+        function addDayBefore() {
+            let d = '';
+            const dates = [...document.querySelectorAll('.day-date')].map(i => i.value).filter(Boolean);
+            if (dates.length) {
+                const dd = new Date(dates[0]);
+                if (!isNaN(dd)) { dd.setDate(dd.getDate() - 1); d = dd.toISOString().slice(0, 10); }
+            }
+            const block = addDay({ date: d });
+            document.getElementById('daysContainer').prepend(block);
+            markUnsaved();
         }
 
         // 新しい日の初期値: 既存の最終日の翌日、無ければNotionの利用日
@@ -2961,8 +2986,25 @@
                 const hint = document.createElement('span');
                 hint.className = 'draw-hint no-print';
                 hint.textContent = '(図面クリックで編集)';
+                const ops = document.createElement('span');
+                ops.className = 'draw-ops no-print';
+                const upBtn = document.createElement('button');
+                upBtn.type = 'button';
+                upBtn.className = 'draw-op';
+                upBtn.textContent = '▲ 上と入替';
+                upBtn.disabled = (i === 0);
+                upBtn.onclick = () => moveDrawing(c.id, -1);
+                const dnBtn = document.createElement('button');
+                dnBtn.type = 'button';
+                dnBtn.className = 'draw-op';
+                dnBtn.textContent = '▼ 下と入替';
+                dnBtn.disabled = (i === canvasList.length - 1);
+                dnBtn.onclick = () => moveDrawing(c.id, 1);
+                ops.appendChild(upBtn);
+                ops.appendChild(dnBtn);
                 head.appendChild(name);
                 head.appendChild(hint);
+                head.appendChild(ops);
                 const slot = document.createElement('div');
                 slot.className = 'draw-slot';
                 slot.onclick = () => openDrawing(c.id);
@@ -2985,6 +3027,27 @@
             c.title = value;
             const label = c.blockElement.querySelector('.block-label');
             if (label) label.textContent = value || '図面';
+            markUnsaved();
+        }
+
+        // 図面の並び順を入れ替え (図面編集モードのブロック順にも反映)
+        function moveDrawing(id, dir) {
+            const idx = canvasList.findIndex(c => c.id === id);
+            const swapIdx = idx + dir;
+            if (idx < 0 || swapIdx < 0 || swapIdx >= canvasList.length) return;
+            const a = canvasList[idx];
+            const b = canvasList[swapIdx];
+            [canvasList[idx], canvasList[swapIdx]] = [b, a];
+            // 図面編集モードのDOM順も入れ替え
+            const parent = a.blockElement.parentNode;
+            if (dir === -1) {
+                parent.insertBefore(a.blockElement, b.blockElement);
+            } else {
+                parent.insertBefore(b.blockElement, a.blockElement);
+            }
+            a.canvasObj.requestRenderAll();
+            b.canvasObj.requestRenderAll();
+            refreshSheetThumbs();
             markUnsaved();
         }
 
@@ -3226,7 +3289,6 @@
         window.onload = function() {
             if (_prevOnload) _prevOnload();
             if (notionEventId) {
-                document.getElementById('notionGroup').style.display = 'flex';
                 document.querySelectorAll('.notion-only').forEach(el => el.style.display = '');
                 if (wantAutoPrint) {
                     // 印刷指定で開かれた場合は即読み込み
