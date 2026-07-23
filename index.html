@@ -3541,8 +3541,8 @@
         }
 
         // --- 読み込み: Notionの「図面データ」プロパティから図面を復元 ---
-        async function notionLoad() {
-            setNotionStatus('⏳ Notionから読込中…');
+        async function notionLoad(attempt = 0) {
+            setNotionStatus(attempt === 0 ? '⏳ Notionから読込中…' : `⏳ ページ情報の準備を待っています… (${attempt + 1}回目)`);
             try {
                 const res = await fetch(
                     `${NOTION_WORKER_URL}/load?id=${encodeURIComponent(notionEventId)}`,
@@ -3554,18 +3554,23 @@
 
                 if (data.drawing) {
                     applyLoadedContent(data.drawing);
-                    setNotionStatus('✅ 打合せ表を読み込みました', true);
+                    setNotionStatus('✅ 読み込みました', true);
                 } else {
-                    setNotionStatus('🆕 新規 (保存でNotionに登録されます)', true);
+                    setNotionStatus('🆕 新規ページです。作業後「Notionに保存」で登録されます', true);
                 }
                 // Notionのプロパティ値を反映
                 // 保存データがある場合は空欄の補完のみ (編集済みのメタ情報を守る)
                 if (data.props) applyNotionProps(data.props, !!data.drawing);
+                refreshSheetThumbs();
                 autoPrintIfRequested();
             } catch (e) {
                 console.error('Notion読込エラー:', e);
-                setNotionStatus('❌ 読込失敗');
-                alert('Notionからの図面読み込みに失敗しました。\n' + e.message);
+                // 作成直後のページはNotionの検索に載るまで数秒かかることがあるため、少し待って再試行
+                if (attempt < 2) {
+                    setTimeout(() => notionLoad(attempt + 1), 2500);
+                    return;
+                }
+                setNotionStatus('❌ 読込失敗: ' + e.message + ' — ページを再読み込みして再度お試しください');
             }
         }
 
