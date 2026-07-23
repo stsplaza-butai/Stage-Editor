@@ -1076,20 +1076,29 @@
         }
 
         // --- キャンバス追加・管理 ---
-        // 全キャンバスのメタ欄(日付・催事名・主催者名)をマスター値で更新
+        // 各図面のメタ欄のうち「空欄のもの」だけをNotion由来の値で補完する
+        // (記入済みの値には一切触れない。図面ごとに独立)
         function syncCanvasMeta() {
-            const vals = {
-                '.cm-date': document.getElementById('eventDate').value,
-                '.cm-title': document.getElementById('eventName').value,
-                '.cm-org': document.getElementById('sf_org').value
+            const masters = {
+                date: document.getElementById('eventDate').value,
+                title: document.getElementById('eventName').value,
+                org: document.getElementById('sf_org').value
             };
-            Object.entries(vals).forEach(([sel, v]) => {
-                document.querySelectorAll(sel).forEach(f => { if (f.value !== v) f.value = v; });
+            const fields = { date: '.cm-date', title: '.cm-title', org: '.cm-org' };
+            canvasList.forEach(c => {
+                if (!c.meta) c.meta = { date: '', title: '', org: '' };
+                Object.entries(fields).forEach(([key, sel]) => {
+                    if (!c.meta[key] && masters[key]) {
+                        c.meta[key] = masters[key];
+                        const f = c.blockElement.querySelector(sel);
+                        if (f) f.value = masters[key];
+                    }
+                });
             });
         }
 
         let canvasSeq = 0;
-        function addNewCanvasBlock(title = '新規図面') {
+        function addNewCanvasBlock(title = '新規図面', meta = null) {
             const id = 'canvas_' + Date.now() + '_' + (canvasSeq++);
             const deletable = true;
             const container = document.getElementById('canvasContainer');
@@ -1132,14 +1141,21 @@
             titleField.value = title;
             titleField.addEventListener('input', () => updateDrawTitle(id, titleField.value));
 
-            // メタ欄: マスター(隠し入力)と同期
-            const metaMap = { '.cm-date': 'eventDate', '.cm-title': 'eventName', '.cm-org': 'sf_org' };
-            Object.entries(metaMap).forEach(([sel, masterId]) => {
+            // メタ欄: この図面専用の値として保持 (図面間で共有しない)
+            // 新規作成時はNotion由来の初期値、保存データからの復元時はその値をそのまま使う
+            const cMeta = meta
+                ? { date: meta.date || '', title: meta.title || '', org: meta.org || '' }
+                : {
+                    date: document.getElementById('eventDate').value || '',
+                    title: document.getElementById('eventName').value || '',
+                    org: document.getElementById('sf_org').value || ''
+                  };
+            const metaFields = { '.cm-date': 'date', '.cm-title': 'title', '.cm-org': 'org' };
+            Object.entries(metaFields).forEach(([sel, key]) => {
                 const field = block.querySelector(sel);
-                field.value = document.getElementById(masterId).value;
+                field.value = cMeta[key];
                 field.addEventListener('input', () => {
-                    document.getElementById(masterId).value = field.value;
-                    syncCanvasMeta();
+                    cMeta[key] = field.value;
                     markUnsaved();
                 });
             });
@@ -1152,6 +1168,7 @@
                 id: id,
                 canvasObj: fCanvas,
                 title: title,
+                meta: cMeta,
                 history: [],
                 historyStep: -1,
                 isHistoryLocked: false,
@@ -2391,7 +2408,7 @@
             arr.forEach((data, i) => {
                 // 1. データに合わせて「箱（キャンバス）」を作る
                 // (旧バージョンの「打合せ表」データも通常キャンバスとして復元する)
-                addNewCanvasBlock(data.title || ('図面' + (i + 1)));
+                addNewCanvasBlock(data.title || ('図面' + (i + 1)), data.meta || null);
 
                 // 今作ったばかりのキャンバスを取得
                 const currentData = canvasList[canvasList.length - 1];
@@ -2448,8 +2465,8 @@
                     ctx.fillText(c.title || '図面', Math.round(12 * scale), stripT / 2);
                     // 下: メタ情報 (小さめ)
                     ctx.font = `${Math.round(11 * scale)}px "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif`;
-                    const dv = document.getElementById('eventDate').value;
-                    const text = `日付：${dv ? dv.split('-').join('/') : ''}　｜　催事名：${document.getElementById('eventName').value.trim()}　｜　主催者名：${document.getElementById('sf_org').value.trim()}`;
+                    const cm = c.meta || {};
+                    const text = `日付：${cm.date ? cm.date.split('-').join('/') : ''}　｜　催事名：${(cm.title || '').trim()}　｜　主催者名：${(cm.org || '').trim()}`;
                     ctx.fillText(text, Math.round(12 * scale), stripT + img.height + stripB / 2);
                     resolve({
                         dataUrl: cv.toDataURL(format === 'jpeg' ? 'image/jpeg' : 'image/png', quality),
@@ -2567,7 +2584,7 @@
             });
         }
 
-        function duplicateActiveCanvas() { const sourceId = activeCanvasId; const sourceData = getCanvasData(sourceId); if (!sourceData) { alert("複製元の図面が選択されていません。"); return; } const json = sourceData.canvasObj.toJSON(PROPERTIES_TO_INCLUDE); const height = sourceData.heightState; addNewCanvasBlock('複製図面'); const newData = canvasList[canvasList.length - 1]; newData.canvasObj.loadFromJSON(json, function() { setCanvasHeight(newData.id, height); restoreBackgroundState(newData.canvasObj); newData.history = [JSON.stringify(newData.canvasObj.toJSON(PROPERTIES_TO_INCLUDE))]; newData.historyStep = 0; updateHeightButtons(newData.id, height); markUnsaved(); }); }
+        function duplicateActiveCanvas() { const sourceId = activeCanvasId; const sourceData = getCanvasData(sourceId); if (!sourceData) { alert("複製元の図面が選択されていません。"); return; } const json = sourceData.canvasObj.toJSON(PROPERTIES_TO_INCLUDE); const height = sourceData.heightState; addNewCanvasBlock('複製図面', sourceData.meta); const newData = canvasList[canvasList.length - 1]; newData.canvasObj.loadFromJSON(json, function() { setCanvasHeight(newData.id, height); restoreBackgroundState(newData.canvasObj); newData.history = [JSON.stringify(newData.canvasObj.toJSON(PROPERTIES_TO_INCLUDE))]; newData.historyStep = 0; updateHeightButtons(newData.id, height); markUnsaved(); }); }
         // --- 照明基本仕込み（JSONから抽出したデータ） ---
         function addLightingBasic() {
             const cvs = getActiveCanvas();
@@ -3106,6 +3123,7 @@
                 data: canvasList.map(c => ({
                     title: c.title || '',
                     height: c.heightState,
+                    meta: c.meta || null,
                     json: c.canvasObj.toJSON(PROPERTIES_TO_INCLUDE)
                 }))
             };
