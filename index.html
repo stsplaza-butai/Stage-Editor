@@ -197,7 +197,7 @@
         .btn-mini.active { background: #90caf9; border-color: #42a5f5; font-weight: bold; }
         .btn-mini:hover { background: #e3f2fd; }
         .btn-del { color: #c62828; border-color: #ef9a9a; background: #ffebee; margin-left: auto; }
-        .canvas-wrapper { border: 1px solid #000; background: white; }
+        .canvas-wrapper { border-left: 1px solid #90a4ae; border-right: 1px solid #90a4ae; background: white; }
 
         .add-canvas-btn {
             padding: 10px; border: 2px dashed #78909c; background: #eceff1; color: #546e7a;
@@ -462,8 +462,13 @@
         /* キャンバス下のメタ情報欄 */
         .canvas-meta {
             display: flex; align-items: stretch; background: #fff;
-            border: 1px solid #90a4ae; border-top: none; font-size: 12px;
+            border: 1px solid #90a4ae; font-size: 12px;
         }
+        .canvas-title-bar {
+            display: flex; align-items: stretch; background: #fff;
+            border: 1px solid #90a4ae; font-size: 12px;
+        }
+        .cm-drawtitle { flex: 1; border-right: none; font-weight: 600; }
         .cm-label {
             display: flex; align-items: center; padding: 4px 10px;
             background: #eceff1; color: #455a64; font-size: 11px; font-weight: 600;
@@ -1106,6 +1111,9 @@
                     </label>
                     ${deletable ? `<button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}', this)">🗑️ 削除</button>` : ''}
                 </div>
+                <div class="canvas-title-bar">
+                    <span class="cm-label">図面名</span><input class="cm-field cm-drawtitle" placeholder="図面名を入力">
+                </div>
                 <div class="canvas-wrapper" onclick="activateCanvas('${id}')">
                     <canvas id="${id}" width="840" height="500"></canvas>
                 </div>
@@ -1118,6 +1126,11 @@
             
             container.insertBefore(block, addBtnContainer); 
             block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // タイトル欄: このキャンバスのタイトルと同期
+            const titleField = block.querySelector('.cm-drawtitle');
+            titleField.value = title;
+            titleField.addEventListener('input', () => updateDrawTitle(id, titleField.value));
 
             // メタ欄: マスター(隠し入力)と同期
             const metaMap = { '.cm-date': 'eventDate', '.cm-title': 'eventName', '.cm-org': 'sf_org' };
@@ -2412,21 +2425,31 @@
                     const stripH = Math.round(36 * scale);
                     const cv = document.createElement('canvas');
                     cv.width = img.width;
-                    cv.height = img.height + stripH;
+                    cv.height = img.height + stripH * 2; // 上: 図面名 / 下: メタ情報
                     const ctx = cv.getContext('2d');
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, cv.width, cv.height);
-                    ctx.drawImage(img, 0, 0);
+                    ctx.drawImage(img, 0, stripH);
                     const lw = Math.max(1, Math.round(scale));
                     ctx.strokeStyle = '#607d8b';
                     ctx.lineWidth = lw;
-                    ctx.strokeRect(lw / 2, img.height + lw / 2, cv.width - lw, stripH - lw);
+                    // 全体の外枠
+                    ctx.strokeRect(lw / 2, lw / 2, cv.width - lw, cv.height - lw);
+                    // 帯とキャンバスの区切り線
+                    ctx.beginPath();
+                    ctx.moveTo(0, stripH - lw / 2); ctx.lineTo(cv.width, stripH - lw / 2);
+                    ctx.moveTo(0, stripH + img.height + lw / 2); ctx.lineTo(cv.width, stripH + img.height + lw / 2);
+                    ctx.stroke();
                     ctx.fillStyle = '#263238';
-                    ctx.font = `${Math.round(17 * scale)}px "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif`;
                     ctx.textBaseline = 'middle';
+                    // 上: 図面名 (太字)
+                    ctx.font = `bold ${Math.round(18 * scale)}px "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif`;
+                    ctx.fillText(c.title || '図面', Math.round(12 * scale), stripH / 2);
+                    // 下: メタ情報
+                    ctx.font = `${Math.round(17 * scale)}px "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif`;
                     const dv = document.getElementById('eventDate').value;
                     const text = `日付：${dv ? dv.split('-').join('/') : ''}　｜　催事名：${document.getElementById('eventName').value.trim()}　｜　主催者名：${document.getElementById('sf_org').value.trim()}`;
-                    ctx.fillText(text, Math.round(12 * scale), img.height + stripH / 2);
+                    ctx.fillText(text, Math.round(12 * scale), stripH + img.height + stripH / 2);
                     resolve({
                         dataUrl: cv.toDataURL(format === 'jpeg' ? 'image/jpeg' : 'image/png', quality),
                         w: cv.width,
@@ -3163,6 +3186,8 @@
             c.title = value;
             const label = c.blockElement.querySelector('.block-label');
             if (label) label.textContent = value || '図面';
+            const tf = c.blockElement.querySelector('.cm-drawtitle');
+            if (tf && tf.value !== value) tf.value = value;
             markUnsaved();
         }
 
