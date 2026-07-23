@@ -3293,15 +3293,23 @@
             setTimeout(() => window.print(), 500);
         }
 
-        // --- Notionプロパティの反映 (打刻用の隠しメタ情報と日付初期値) ---
-        function applyNotionProps(props) {
-            if (props['催事名']) document.getElementById('eventName').value = props['催事名'];
-            if (props['主催者名']) document.getElementById('sf_org').value = props['主催者名'];
+        // --- Notionプロパティの反映 ---
+        // fillOnlyEmpty=true のとき: すでに値が入っている欄には触れず、空欄だけを補完する
+        // (保存済みデータがある場合、編集したメタ情報をNotionの値で上書きしないため)
+        function applyNotionProps(props, fillOnlyEmpty) {
+            const setVal = (id, v) => {
+                if (!v) return;
+                const el = document.getElementById(id);
+                if (fillOnlyEmpty && el.value) return;
+                el.value = v;
+            };
+            setVal('eventName', props['催事名']);
+            setVal('sf_org', props['主催者名']);
             const titleText = props['予定タイトル'] || props['Name'] || '';
             const m = titleText.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
             if (m) {
                 const iso = `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
-                document.getElementById('eventDate').value = iso;
+                setVal('eventDate', iso);
                 // 日付未入力の日ブロックに反映
                 document.querySelectorAll('.day-date').forEach(inp => { if (!inp.value) inp.value = iso; });
             }
@@ -3502,8 +3510,9 @@
                 } else {
                     setNotionStatus('🆕 新規 (保存でNotionに登録されます)', true);
                 }
-                // Notionのプロパティ値を最後に反映 (催事名などはNotionが正)
-                if (data.props) applyNotionProps(data.props);
+                // Notionのプロパティ値を反映
+                // 保存データがある場合は空欄の補完のみ (編集済みのメタ情報を守る)
+                if (data.props) applyNotionProps(data.props, !!data.drawing);
                 autoPrintIfRequested();
             } catch (e) {
                 console.error('Notion読込エラー:', e);
