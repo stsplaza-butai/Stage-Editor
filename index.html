@@ -482,6 +482,13 @@
         .cm-date { flex: 0 0 150px; }
         .cm-title { flex: 1.1; }
         .cm-org { flex: 1.4; border-right: none; }
+        .cm-notion-btn {
+            display: none; align-items: center; white-space: nowrap;
+            border: none; border-left: 1px solid #b0bec5; background: #eceff1;
+            color: #1a73e8; font-size: 11px; padding: 0 12px; cursor: pointer;
+        }
+        .cm-notion-btn:hover { background: #fff; }
+        body.notion-mode .cm-notion-btn { display: inline-flex; }
 
         /* スタートゲート */
         #startGate {
@@ -1076,6 +1083,26 @@
         }
 
         // --- キャンバス追加・管理 ---
+        // 「Notion情報を反映」: 指定図面のメタ欄をNotionの最新プロパティで書き換える
+        function applyNotionMetaTo(id) {
+            const props = window.notionPropsCache;
+            const c = getCanvasData(id);
+            if (!c || !props) return;
+            if (!c.meta) c.meta = { date: '', title: '', org: '' };
+            if (props['催事名']) c.meta.title = props['催事名'];
+            if (props['主催者名']) c.meta.org = props['主催者名'];
+            const m = (props['予定タイトル'] || props['Name'] || '').match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
+            if (m) {
+                c.meta.date = `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+            }
+            const map = { '.cm-date': 'date', '.cm-title': 'title', '.cm-org': 'org' };
+            Object.entries(map).forEach(([sel, key]) => {
+                const f = c.blockElement.querySelector(sel);
+                if (f) f.value = c.meta[key] || '';
+            });
+            markUnsaved();
+        }
+
         // 各図面のメタ欄のうち「空欄のもの」だけをNotion由来の値で補完する
         // (記入済みの値には一切触れない。図面ごとに独立)
         function syncCanvasMeta() {
@@ -1130,6 +1157,7 @@
                     <span class="cm-label">日付</span><input type="date" class="cm-field cm-date">
                     <span class="cm-label">催事名</span><input class="cm-field cm-title" placeholder="催事名">
                     <span class="cm-label">主催者名</span><input class="cm-field cm-org" placeholder="主催者名">
+                    <button type="button" class="cm-notion-btn" title="Notionページの最新情報(日付・催事名・主催者名)でこの図面のメタ欄を書き換えます" onclick="applyNotionMetaTo('${id}')">🔄 Notion情報を反映</button>
                 </div>
             `;
             
@@ -3471,6 +3499,7 @@
         window.onload = function() {
             if (_prevOnload) _prevOnload();
             if (notionEventId) {
+                document.body.classList.add('notion-mode');
                 document.querySelectorAll('.notion-only').forEach(el => el.style.display = '');
                 if (wantAutoPrint) {
                     // 印刷指定で開かれた場合は即読み込み
@@ -3521,6 +3550,7 @@
                 );
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                window.notionPropsCache = data.props || null; // 「Notion情報を反映」ボタン用の最新値
 
                 if (data.drawing) {
                     applyLoadedContent(data.drawing);
