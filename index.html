@@ -1133,9 +1133,11 @@
                     <label style="font-size:11px; margin-left:10px; cursor:pointer;">
                         
                     </label>
-                    <button class="btn-mini" onclick="moveDrawing('${id}', -1)" title="上と入れ替え">▲</button>
-                    <button class="btn-mini" onclick="moveDrawing('${id}', 1)" title="下と入れ替え">▼</button>
-                    ${deletable ? `<button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}', this)">🗑️ 削除</button>` : ''}
+                    <span class="draw-ops">
+                        <button type="button" class="draw-op" onclick="moveDrawing('${id}', -1)">▲ 上と入替</button>
+                        <button type="button" class="draw-op" onclick="moveDrawing('${id}', 1)">▼ 下と入替</button>
+                        ${deletable ? `<button type="button" class="draw-op draw-op-del" onclick="deleteCanvasBlock('${id}', this)">🗑️ 削除</button>` : ''}
+                    </span>
                 </div>
                 <div class="canvas-title-bar">
                     <span class="cm-label">図面名</span><input class="cm-field cm-drawtitle" placeholder="図面名を入力">
