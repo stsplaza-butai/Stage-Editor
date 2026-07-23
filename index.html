@@ -266,8 +266,9 @@
             background: #35485c; color: #b7c4d0;
         }
         .tab-btn.active { background: #f5f7f9; color: #1c2733; font-weight: bold; }
+        .header-actions { display: flex; align-items: center; gap: 8px; margin-left: 18px; }
 
-        #sheetView { display: none; flex: 1; overflow: auto; background: #6f7f8c; padding: 0 0 30px; }
+        #sheetView { display: none; flex: 1; overflow: auto; background: #6f7f8c; padding: 18px 0 30px; }
         body.sheet-mode #sheetView { display: block; }
         body.sheet-mode .toolbar-row,
         body.sheet-mode .main-container,
@@ -605,19 +606,16 @@
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集モード</button>
         </div>
+        <span class="notion-only header-actions" style="display:none;">
+            <button class="st-btn st-primary" id="notionSaveBtn" onclick="notionSave()">☁️ Notionに保存</button>
+            <button class="st-btn" onclick="notionPasteImage()" title="現在の内容を画像化してNotionページの上部に貼り付けます">🖼️ ページに画像を貼る</button>
+            <span class="notion-status" style="font-size:11px; color:#dfe6ec;"></span>
+        </span>
         <span style="flex:1"></span>
     </header>
 
     <!-- ============ 打合せ表ビュー ============ -->
     <div id="sheetView">
-        <div class="sheet-toolbar">
-            <span class="notion-only" style="display:none;">
-                <button class="st-btn st-primary" id="notionSaveBtn" onclick="notionSave()">☁️ Notionに保存</button>
-                <button class="st-btn" onclick="notionPasteImage()" title="現在の内容を画像化してNotionページの上部に貼り付けます">🖼️ ページに画像を貼る</button>
-                <span class="notion-status" style="font-size:11px; color:#dfe6ec; margin-left:8px;"></span>
-            </span>
-            <span style="flex:1"></span>
-        </div>
         <div id="startGate" style="display:none;">
             <button type="button" class="start-btn" onclick="startEditor()">▶️ タイムテーブル・図面を開く</button>
             <div class="start-note">閲覧だけの場合はこのままでOKです (ページに貼られた画像をご覧ください)</div>
@@ -3495,7 +3493,6 @@
             if (_prevOnload) _prevOnload();
             if (notionEventId) {
                 document.body.classList.add('notion-mode');
-                document.querySelectorAll('.notion-only').forEach(el => el.style.display = '');
                 if (wantAutoPrint) {
                     // 印刷指定で開かれた場合は即読み込み
                     startEditor();
@@ -3503,8 +3500,6 @@
                     // 「開く」ボタンが押されるまで読み込みを保留 (閲覧専用の人の邪魔をしない)
                     document.getElementById('startGate').style.display = 'flex';
                     document.getElementById('sheetPage').style.display = 'none';
-                    const tb = document.querySelector('.sheet-toolbar');
-                    if (tb) tb.style.display = 'none';
                 }
             } else {
                 autoPrintIfRequested();
@@ -3514,8 +3509,8 @@
         function startEditor() {
             document.getElementById('startGate').style.display = 'none';
             document.getElementById('sheetPage').style.display = '';
-            const tb = document.querySelector('.sheet-toolbar');
-            if (tb) tb.style.display = '';
+            // 保存系ボタンはデータ読み込み開始後に表示 (読み込み前の誤保存を防ぐ)
+            document.querySelectorAll('.notion-only').forEach(el => el.style.display = '');
             notionLoad();
         }
 
