@@ -503,18 +503,6 @@
         .start-btn:hover { background: #2c80f0; }
         .start-note { font-size: 11px; color: #c8d2da; }
 
-        /* 集中編集モード */
-        body.focus-draw .canvas-block { display: none; }
-        body.focus-draw .canvas-block.focused { display: block; }
-        body.focus-draw .add-canvas-btn { display: none !important; }
-        .focus-back {
-            position: fixed; right: 18px; bottom: 18px; z-index: 999;
-            padding: 10px 20px; font-size: 13px; font-weight: bold;
-            background: #1a73e8; color: #fff; border: none; border-radius: 24px;
-            box-shadow: 0 4px 14px rgba(0,0,0,.35); cursor: pointer;
-        }
-        .focus-back:hover { background: #2c80f0; }
-
         /* 日ブロック (タイムテーブル・借用区分) */
         .day-block { margin-bottom: 10px; }
         .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
@@ -542,6 +530,7 @@
         }
         .draw-op:hover:not(:disabled) { border-color: #1a73e8; color: #1a73e8; }
         .draw-op:disabled { opacity: .35; cursor: default; }
+        .draw-op-del:hover { border-color: #c62828 !important; color: #c62828 !important; }
 
         /* 追加ボタン */
         .add-mini-btn {
@@ -614,7 +603,7 @@
         <div class="title">📋 タイムテーブル＆図面エディター Ver5.0</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
-            <button id="tabDraw" class="tab-btn" onclick="document.body.classList.remove('focus-draw'); canvasList.forEach(c => c.blockElement.classList.remove('focused')); const fb=document.getElementById('focusBackBtn'); if(fb) fb.style.display='none'; switchView('draw');">🎨 図面編集モード</button>
+            <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集モード</button>
         </div>
         <span style="flex:1"></span>
     </header>
@@ -654,7 +643,6 @@
         </div>
     </div>
     <!-- ============ /打合せ表ビュー ============ -->
-    <button id="focusBackBtn" class="focus-back" onclick="exitFocusDraw()" style="display:none;">✅ 編集おわり — 戻る</button>
 
     <div class="toolbar-row top-toolbar">
         <div class="toolbar-group">
@@ -1145,6 +1133,8 @@
                     <label style="font-size:11px; margin-left:10px; cursor:pointer;">
                         
                     </label>
+                    <button class="btn-mini" onclick="moveDrawing('${id}', -1)" title="上と入れ替え">▲</button>
+                    <button class="btn-mini" onclick="moveDrawing('${id}', 1)" title="下と入れ替え">▼</button>
                     ${deletable ? `<button class="btn-mini btn-del" onclick="deleteCanvasBlock('${id}', this)">🗑️ 削除</button>` : ''}
                 </div>
                 <div class="canvas-title-bar">
@@ -1229,10 +1219,15 @@
                 }, 3000);
                 return;
             }
+            removeCanvas(id);
+        }
+
+        function removeCanvas(id) {
             const idx = canvasList.findIndex(c => c.id === id);
             if(idx > -1) {
                 canvasList[idx].canvasObj.dispose(); canvasList[idx].blockElement.remove(); canvasList.splice(idx, 1);
                 if(activeCanvasId === id) { activeCanvasId = null; document.getElementById('activeCanvasName').textContent = 'なし'; }
+                refreshSheetThumbs();
                 markUnsaved(); 
             }
         }
@@ -2955,11 +2950,6 @@
             document.getElementById('tabSheet').classList.toggle('active', isSheet);
             document.getElementById('tabDraw').classList.toggle('active', !isSheet);
             if (isSheet) {
-                // 集中編集モードの解除 (戻るボタンを消す)
-                document.body.classList.remove('focus-draw');
-                canvasList.forEach(c => c.blockElement.classList.remove('focused'));
-                const fb = document.getElementById('focusBackBtn');
-                if (fb) fb.style.display = 'none';
                 refreshSheetThumbs();
             } else {
                 canvasList.forEach(c => c.canvasObj.requestRenderAll());
@@ -3207,8 +3197,24 @@
                 dnBtn.textContent = '▼ 下と入替';
                 dnBtn.disabled = (i === canvasList.length - 1);
                 dnBtn.onclick = () => moveDrawing(c.id, 1);
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'draw-op draw-op-del';
+                delBtn.textContent = '🗑️ 削除';
+                delBtn.onclick = () => {
+                    if (!delBtn.dataset.arm) {
+                        delBtn.dataset.arm = '1';
+                        delBtn.textContent = '❗ もう一度押すと削除';
+                        setTimeout(() => {
+                            if (delBtn.isConnected) { delete delBtn.dataset.arm; delBtn.textContent = '🗑️ 削除'; }
+                        }, 3000);
+                        return;
+                    }
+                    removeCanvas(c.id);
+                };
                 ops.appendChild(upBtn);
                 ops.appendChild(dnBtn);
+                ops.appendChild(delBtn);
                 head.appendChild(name);
                 head.appendChild(ops);
                 const slot = document.createElement('div');
@@ -3266,24 +3272,11 @@
 
         function openDrawing(id) {
             switchView('draw');
-            // 集中編集モード: 選んだ図面だけを表示する
-            document.body.classList.add('focus-draw');
-            canvasList.forEach(c => c.blockElement.classList.toggle('focused', c.id === id));
-            const fb = document.getElementById('focusBackBtn');
-            if (fb) fb.style.display = 'block';
             setTimeout(() => {
                 activateCanvas(id);
                 const block = document.getElementById('block_' + id);
                 if (block) block.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 60);
-        }
-
-        function exitFocusDraw() {
-            document.body.classList.remove('focus-draw');
-            canvasList.forEach(c => c.blockElement.classList.remove('focused'));
-            const fb = document.getElementById('focusBackBtn');
-            if (fb) fb.style.display = 'none';
-            switchView('sheet');
         }
 
         // --- 印刷 ---
