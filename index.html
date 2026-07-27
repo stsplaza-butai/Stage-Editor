@@ -3509,7 +3509,9 @@
         const NOTION_APP_KEY = "";
 
         // URLの ?id=MORI-970 から催事IDを取得
-        const notionEventId = new URLSearchParams(location.search).get('id');
+        // 数字を含まないもの(?id=PLACEHOLDER など)は「未接続」として扱う
+        const rawNotionId = new URLSearchParams(location.search).get('id');
+        const notionEventId = (rawNotionId && /\d/.test(rawNotionId)) ? rawNotionId : null;
 
         // 既存のonloadを保持しつつ、Notionモードの初期化を追加
         const _prevOnload = window.onload;
@@ -3526,13 +3528,22 @@
                     document.getElementById('sheetPage').style.display = 'none';
                 }
             } else if (window.self !== window.top) {
-                // Notionに埋め込まれているのにidが無い → 接続パネルを表示
-                document.getElementById('connectPanel').style.display = 'flex';
-                document.getElementById('sheetPage').style.display = 'none';
+                // Notionに埋め込まれているのにidが無い/不正 → 接続パネルを表示
+                showConnectPanel();
             } else {
                 autoPrintIfRequested();
             }
         };
+
+        // 接続パネルを表示 (未接続・ID不正・読込失敗時)
+        function showConnectPanel(msg) {
+            document.getElementById('connectPanel').style.display = 'flex';
+            document.getElementById('sheetPage').style.display = 'none';
+            document.getElementById('startGate').style.display = 'none';
+            // 未接続の状態で保存されないようボタンを隠す
+            document.querySelectorAll('.notion-only').forEach(el => el.style.display = 'none');
+            if (msg) document.getElementById('cpStatus').textContent = msg;
+        }
 
         // 既存ページへの後付け接続: 識別IDを指定して埋め込みURLを書き換える
         async function connectToPage() {
@@ -3608,7 +3619,8 @@
                     setTimeout(() => notionLoad(attempt + 1), 2500);
                     return;
                 }
-                setNotionStatus('❌ 読込失敗: ' + e.message + ' — ページを再読み込みして再度お試しください');
+                setNotionStatus('❌ 読込失敗');
+                showConnectPanel('❌ 読み込みに失敗しました (' + e.message + ')。識別IDを入力して接続し直せます。');
             }
         }
 
