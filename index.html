@@ -533,11 +533,17 @@
             position: absolute; left: 99px; top: 50%; transform: translateY(-50%);
             pointer-events: none; font-size: 12px; font-weight: 600; color: #3c4c5c;
         }
-        .day-del {
-            margin-left: auto; font-size: 9.5px; padding: 1px 8px; cursor: pointer;
-            border: 1px solid #d4dae0; border-radius: 3px; background: #fff; color: #97a3ae;
+        .day-op {
+            font-size: 9.5px; padding: 1px 8px; margin-left: 4px; cursor: pointer;
+            border: 1px solid #d4dae0; border-radius: 3px; background: #fff; color: #5a6b7c;
         }
-        .day-del:hover { color: #c62828; border-color: #c62828; }
+        .day-op:hover { border-color: #1a73e8; color: #1a73e8; }
+        .day-del { color: #97a3ae; }
+        .day-del:hover { color: #c62828 !important; border-color: #c62828 !important; }
+        /* Notion連携時のみ表示する貼り付けボタン */
+        .paste-btn { display: none; }
+        body.notion-mode .paste-btn { display: inline-block; }
+        .draw-op.paste-btn:hover:not(:disabled) { border-color: #1a73e8; color: #1a73e8; }
 
         /* 図面リスト */
         .draw-item { margin-bottom: 12px; }
@@ -621,7 +627,7 @@
 <body>
 
     <header>
-        <div class="title">📋 タイムテーブル＆図面エディター Ver5.1</div>
+        <div class="title">📋 タイムテーブル＆図面エディター Ver5.2</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集モード</button>
@@ -3008,9 +3014,17 @@
             };
             date.addEventListener('input', updateDow);
             updateDow();
+            const spacer = document.createElement('span');
+            spacer.style.flex = '1';
+            const paste = document.createElement('button');
+            paste.type = 'button';
+            paste.className = 'day-op paste-btn no-print';
+            paste.textContent = '🖼️ 画像を貼る';
+            paste.title = 'このタイムテーブルだけをNotionページに貼り付けます';
+            paste.onclick = () => pasteDayImage(paste, block);
             const del = document.createElement('button');
             del.type = 'button';
-            del.className = 'day-del no-print';
+            del.className = 'day-op day-del no-print';
             del.textContent = '✕ この日を削除';
             del.onclick = () => {
                 if (!del.dataset.arm) {
@@ -3027,6 +3041,8 @@
             dateWrap.appendChild(date);
             dateWrap.appendChild(dow);
             head.appendChild(dateWrap);
+            head.appendChild(spacer);
+            head.appendChild(paste);
             head.appendChild(del);
             block.appendChild(head);
 
@@ -3215,6 +3231,12 @@
                 name.oninput = () => updateDrawTitle(c.id, name.value);
                 const ops = document.createElement('span');
                 ops.className = 'draw-ops no-print';
+                const pasteBtn = document.createElement('button');
+                pasteBtn.type = 'button';
+                pasteBtn.className = 'draw-op paste-btn';
+                pasteBtn.textContent = '🖼️ 画像を貼る';
+                pasteBtn.title = 'この図面だけをNotionページに貼り付けます';
+                pasteBtn.onclick = () => pasteDrawingImage(pasteBtn, c.id);
                 const upBtn = document.createElement('button');
                 upBtn.type = 'button';
                 upBtn.className = 'draw-op';
@@ -3242,6 +3264,7 @@
                     }
                     removeCanvas(c.id);
                 };
+                ops.appendChild(pasteBtn);
                 ops.appendChild(upBtn);
                 ops.appendChild(dnBtn);
                 ops.appendChild(delBtn);
@@ -3385,6 +3408,67 @@
             syncCanvasMeta();
         }
 
+        // 画像をNotionページ上部に貼り付ける (共通処理)
+        async function postImagesToNotion(images) {
+            const res = await fetch(
+                `${NOTION_WORKER_URL}/image?id=${encodeURIComponent(notionEventId)}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...notionHeaders() },
+                    body: JSON.stringify({ images: images })
+                }
+            );
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+            return result;
+        }
+
+        // 1つのボタンから単独で貼り付けるときの共通処理
+        async function pasteSingle(btn, buildPng, label) {
+            if (!notionEventId) return;
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ 貼付中…';
+            setNotionStatus(`⏳ ${label}を貼り付け中…`);
+            try {
+                const png = await buildPng();
+                if (!png) throw new Error('画像を作成できませんでした');
+                await postImagesToNotion([{ png: png }]);
+                btn.textContent = '✅ 貼付完了';
+                setNotionStatus(`✅ ${label}を貼り付けました`, true);
+            } catch (e) {
+                console.error('画像貼り付けエラー:', e);
+                btn.textContent = '❌ 失敗';
+                setNotionStatus('❌ 貼り付け失敗: ' + e.message);
+            } finally {
+                setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
+            }
+        }
+
+        // 日ブロック(タイムテーブル)を1枚だけ貼り付け
+        function pasteDayImage(btn, block) {
+            pasteSingle(btn, async () => {
+                switchView('sheet');
+                await new Promise(r => setTimeout(r, 250));
+                if (!window.html2canvas) return null;
+                const cv = await html2canvas(block, {
+                    scale: 1.5, backgroundColor: '#ffffff', logging: false,
+                    onclone: (doc) => prepareCaptureClone(doc)
+                });
+                return cv.toDataURL('image/png');
+            }, 'タイムテーブル');
+        }
+
+        // 図面を1枚だけ貼り付け
+        function pasteDrawingImage(btn, id) {
+            const c = getCanvasData(id);
+            if (!c) return;
+            pasteSingle(btn, async () => {
+                const r = await canvasWithMeta(c, 'png', 0.92, 1.4);
+                return r.dataUrl;
+            }, c.title || '図面');
+        }
+
         // --- 画像貼り付け: タイムテーブル(日ごと)と図面(1枚ずつ)を個別画像で貼る ---
         async function notionPasteImage() {
             if (!notionEventId) return;
@@ -3422,16 +3506,7 @@
 
                 if (images.length === 0) throw new Error('貼り付ける内容がありません');
                 setNotionStatus(`⏳ ${images.length}枚をNotionに貼り付け中…`);
-                const res = await fetch(
-                    `${NOTION_WORKER_URL}/image?id=${encodeURIComponent(notionEventId)}`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...notionHeaders() },
-                        body: JSON.stringify({ images: images })
-                    }
-                );
-                const result = await res.json();
-                if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+                const result = await postImagesToNotion(images);
                 console.log('画像貼り付け結果:', result);
                 setNotionStatus(`✅ ${images.length}枚を貼り付けました`, true);
             } catch (e) {
