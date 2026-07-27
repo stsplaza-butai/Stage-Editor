@@ -518,6 +518,11 @@
         }
         .start-btn:hover { background: #2c80f0; }
         .start-note { font-size: 11px; color: #c8d2da; }
+        .gate-link {
+            background: none; border: none; color: #c8d2da; font-size: 11px;
+            text-decoration: underline; cursor: pointer; padding: 2px;
+        }
+        .gate-link:hover { color: #fff; }
 
         /* 日ブロック (タイムテーブル・借用区分) */
         .day-block { margin-bottom: 10px; }
@@ -616,7 +621,7 @@
 <body>
 
     <header>
-        <div class="title">📋 タイムテーブル＆図面エディター Ver5.0</div>
+        <div class="title">📋 タイムテーブル＆図面エディター Ver5.1</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集モード</button>
@@ -643,6 +648,7 @@
         <div id="startGate" style="display:none;">
             <button type="button" class="start-btn" onclick="startEditor()">▶️ タイムテーブル・図面を開く</button>
             <div class="start-note">閲覧だけの場合はこのままでOKです (ページに貼られた画像をご覧ください)</div>
+            <button type="button" class="gate-link" onclick="showConnectPanel()">🔗 ページ接続の設定</button>
         </div>
         <div id="sheetPage">
             <!-- 打刻・保存用の隠しメタ情報 (Notionから自動設定される) -->
