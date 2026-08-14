@@ -518,6 +518,7 @@
         }
         .start-btn:hover { background: #2c80f0; }
         .start-note { font-size: 11px; color: #c8d2da; }
+        .gate-links { display: flex; gap: 16px; margin-top: 2px; }
         .gate-link {
             background: none; border: none; color: #c8d2da; font-size: 11px;
             text-decoration: underline; cursor: pointer; padding: 2px;
@@ -627,7 +628,7 @@
 <body>
 
     <header>
-        <div class="title">📋 タイムテーブル＆図面エディター Ver5.2</div>
+        <div class="title">📋 タイムテーブル＆図面エディター Ver5.3</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集モード</button>
@@ -652,9 +653,12 @@
             <div id="cpStatus" class="cp-status"></div>
         </div>
         <div id="startGate" style="display:none;">
-            <button type="button" class="start-btn" onclick="startEditor()">▶️ タイムテーブル・図面を開く</button>
-            <div class="start-note">閲覧だけの場合はこのままでOKです (ページに貼られた画像をご覧ください)</div>
-            <button type="button" class="gate-link" onclick="showConnectPanel()">🔗 ページ接続の設定</button>
+            <button type="button" class="start-btn" onclick="openEditorInNewTab()">🚀 別のタブで開いて編集する</button>
+            <div class="start-note">広い画面で作業できます。閲覧だけの場合はこのままでOKです</div>
+            <div class="gate-links">
+                <button type="button" class="gate-link" onclick="startEditor()">このまま埋め込みの中で開く</button>
+                <button type="button" class="gate-link" onclick="showConnectPanel()">🔗 ページ接続の設定</button>
+            </div>
         </div>
         <div id="sheetPage">
             <!-- 打刻・保存用の隠しメタ情報 (Notionから自動設定される) -->
@@ -3600,11 +3604,12 @@
             if (_prevOnload) _prevOnload();
             if (notionEventId) {
                 document.body.classList.add('notion-mode');
-                if (wantAutoPrint) {
-                    // 印刷指定で開かれた場合は即読み込み
+                if (wantAutoPrint || window.self === window.top) {
+                    // 単独タブで開かれた場合は即読み込み (別タブ起動の受け皿)
                     startEditor();
                 } else {
-                    // 「開く」ボタンが押されるまで読み込みを保留 (閲覧専用の人の邪魔をしない)
+                    // 埋め込み内では読み込みを保留し、入口ボタンだけを表示する
+                    // (閲覧中のスクロールを妨げないため)
                     document.getElementById('startGate').style.display = 'flex';
                     document.getElementById('sheetPage').style.display = 'none';
                 }
@@ -3643,6 +3648,15 @@
             } catch (e) {
                 console.error('接続エラー:', e);
                 st.textContent = '❌ ' + e.message;
+            }
+        }
+
+        // 埋め込みから: 新しいタブでアプリを開く (そちらで自動的にデータ読み込み)
+        function openEditorInNewTab() {
+            const win = window.open(location.href, '_blank');
+            if (!win) {
+                // ポップアップがブロックされた場合はその場で開く
+                startEditor();
             }
         }
 
