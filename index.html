@@ -491,6 +491,25 @@
         .cm-notion-btn:hover { background: #fff; }
         body.notion-mode .cm-notion-btn { display: inline-flex; }
 
+        /* ランチャー表示 (Notion埋め込み時: ボタンのみ) */
+        body.launcher-mode { background: transparent; }
+        body.launcher-mode header { display: none; }
+        body.launcher-mode #sheetView {
+            padding: 0; background: transparent;
+            display: flex; align-items: center; justify-content: center;
+        }
+        body.launcher-mode #startGate { padding: 14px; }
+        body.launcher-mode .start-note,
+        body.launcher-mode .gate-links { display: none; }
+        body.launcher-mode .start-btn {
+            font-size: 15px; padding: 13px 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.18);
+        }
+        body.launcher-mode #connectPanel { padding: 20px; }
+        body.launcher-mode .cp-title { color: #c77700; }
+        body.launcher-mode .cp-desc,
+        body.launcher-mode .cp-status { color: #5a6b7c; }
+
         /* ページ接続パネル */
         #connectPanel {
             display: none; flex-direction: column; align-items: center; gap: 8px;
@@ -628,7 +647,7 @@
 <body>
 
     <header>
-        <div class="title">📋 タイムテーブル＆図面エディター Ver5.3</div>
+        <div class="title">📋 タイムテーブル＆図面エディター Ver5.4</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集モード</button>
@@ -647,13 +666,13 @@
             <div class="cp-title">⚠️ このページとまだ接続されていません</div>
             <div class="cp-desc">このページの「識別ID」を入力して接続すると、保存できるようになります。</div>
             <div class="cp-row">
-                <input id="cpIdInput" class="cp-input" placeholder="例: MORI-3645" onkeydown="if(event.key==='Enter') connectToPage();">
+                <input id="cpIdInput" class="cp-input" value="MORI-" placeholder="例: MORI-3645" onkeydown="if(event.key==='Enter') connectToPage();">
                 <button type="button" class="start-btn cp-btn" onclick="connectToPage()">🔗 このページに接続</button>
             </div>
             <div id="cpStatus" class="cp-status"></div>
         </div>
         <div id="startGate" style="display:none;">
-            <button type="button" class="start-btn" onclick="openEditorInNewTab()">🚀 別のタブで開いて編集する</button>
+            <button type="button" class="start-btn" onclick="openEditorInNewTab()">🎨 タイムテーブル・図面を編集する</button>
             <div class="start-note">広い画面で作業できます。閲覧だけの場合はこのままでOKです</div>
             <div class="gate-links">
                 <button type="button" class="gate-link" onclick="startEditor()">このまま埋め込みの中で開く</button>
@@ -3608,13 +3627,15 @@
                     // 単独タブで開かれた場合は即読み込み (別タブ起動の受け皿)
                     startEditor();
                 } else {
-                    // 埋め込み内では読み込みを保留し、入口ボタンだけを表示する
-                    // (閲覧中のスクロールを妨げないため)
+                    // 埋め込み内は「開くボタン」だけのランチャー表示にする
+                    // (読み込みを行わないので閲覧中のスクロールを妨げない)
+                    document.body.classList.add('launcher-mode');
                     document.getElementById('startGate').style.display = 'flex';
                     document.getElementById('sheetPage').style.display = 'none';
                 }
             } else if (window.self !== window.top) {
                 // Notionに埋め込まれているのにidが無い/不正 → 接続パネルを表示
+                document.body.classList.add('launcher-mode');
                 showConnectPanel();
             } else {
                 autoPrintIfRequested();
@@ -3629,13 +3650,16 @@
             // 未接続の状態で保存されないようボタンを隠す
             document.querySelectorAll('.notion-only').forEach(el => el.style.display = 'none');
             if (msg) document.getElementById('cpStatus').textContent = msg;
+            const inp = document.getElementById('cpIdInput');
+            if (!inp.value.trim()) inp.value = 'MORI-';
+            setTimeout(() => { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }, 50);
         }
 
         // 既存ページへの後付け接続: 識別IDを指定して埋め込みURLを書き換える
         async function connectToPage() {
             const raw = document.getElementById('cpIdInput').value.trim();
             const st = document.getElementById('cpStatus');
-            if (!raw) { st.textContent = '識別IDを入力してください'; return; }
+            if (!/\d/.test(raw)) { st.textContent = '識別IDの数字部分を入力してください (例: MORI-3645)'; return; }
             st.textContent = '⏳ 接続中…';
             try {
                 const res = await fetch(
