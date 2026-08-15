@@ -492,7 +492,8 @@
         body.notion-mode .cm-notion-btn { display: inline-flex; }
 
         /* ランチャー表示 (Notion埋め込み時: ボタンのみ) */
-        body.launcher-mode { background: transparent; }
+        body.launcher-mode { background: #191919; }
+        body.launcher-mode #sheetView { background: #191919; }
         body.launcher-mode header { display: none; }
         body.launcher-mode #sheetView {
             padding: 0; background: transparent;
@@ -506,9 +507,15 @@
             box-shadow: 0 2px 8px rgba(0,0,0,.18);
         }
         body.launcher-mode #connectPanel { padding: 20px; }
-        body.launcher-mode .cp-title { color: #c77700; }
+        body.launcher-mode .cp-title { color: #ffc46b; }
         body.launcher-mode .cp-desc,
-        body.launcher-mode .cp-status { color: #5a6b7c; }
+        body.launcher-mode .cp-status { color: #b9c2cb; }
+        /* ライトモード指定時 (&theme=light) */
+        body.launcher-mode.theme-light,
+        body.launcher-mode.theme-light #sheetView { background: #ffffff; }
+        body.launcher-mode.theme-light .cp-title { color: #c77700; }
+        body.launcher-mode.theme-light .cp-desc,
+        body.launcher-mode.theme-light .cp-status { color: #5a6b7c; }
 
         /* ページ接続パネル */
         #connectPanel {
@@ -531,6 +538,7 @@
             gap: 12px; padding: 60px 20px;
         }
         .start-btn {
+            display: inline-block; text-decoration: none; text-align: center;
             font-size: 16px; font-weight: bold; padding: 14px 36px; cursor: pointer;
             background: #1a73e8; color: #fff; border: none; border-radius: 30px;
             box-shadow: 0 4px 14px rgba(0,0,0,.3);
@@ -647,7 +655,7 @@
 <body>
 
     <header>
-        <div class="title">📋 タイムテーブル＆図面エディター Ver5.4</div>
+        <div class="title">📋 タイムテーブル＆図面エディター Ver5.5</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集モード</button>
@@ -672,7 +680,7 @@
             <div id="cpStatus" class="cp-status"></div>
         </div>
         <div id="startGate" style="display:none;">
-            <button type="button" class="start-btn" onclick="openEditorInNewTab()">🎨 タイムテーブル・図面を編集する</button>
+            <a id="openTabLink" class="start-btn" target="_blank" rel="noopener">🎨 タイムテーブル・図面を編集する</a>
             <div class="start-note">広い画面で作業できます。閲覧だけの場合はこのままでOKです</div>
             <div class="gate-links">
                 <button type="button" class="gate-link" onclick="startEditor()">このまま埋め込みの中で開く</button>
@@ -3615,6 +3623,10 @@
         // URLの ?id=MORI-970 から催事IDを取得
         // 数字を含まないもの(?id=PLACEHOLDER など)は「未接続」として扱う
         const rawNotionId = new URLSearchParams(location.search).get('id');
+        // 埋め込みの見た目: 既定はダーク。?theme=light を付けるとライトになる
+        if (new URLSearchParams(location.search).get('theme') === 'light') {
+            document.documentElement.classList.add('theme-light-req');
+        }
         const notionEventId = (rawNotionId && /\d/.test(rawNotionId)) ? rawNotionId : null;
 
         // 既存のonloadを保持しつつ、Notionモードの初期化を追加
@@ -3630,6 +3642,11 @@
                     // 埋め込み内は「開くボタン」だけのランチャー表示にする
                     // (読み込みを行わないので閲覧中のスクロールを妨げない)
                     document.body.classList.add('launcher-mode');
+                    if (document.documentElement.classList.contains('theme-light-req')) {
+                        document.body.classList.add('theme-light');
+                    }
+                    // リンクで新しいタブを開く (埋め込み側では一切読み込まない)
+                    document.getElementById('openTabLink').href = location.href;
                     document.getElementById('startGate').style.display = 'flex';
                     document.getElementById('sheetPage').style.display = 'none';
                 }
@@ -3672,15 +3689,6 @@
             } catch (e) {
                 console.error('接続エラー:', e);
                 st.textContent = '❌ ' + e.message;
-            }
-        }
-
-        // 埋め込みから: 新しいタブでアプリを開く (そちらで自動的にデータ読み込み)
-        function openEditorInNewTab() {
-            const win = window.open(location.href, '_blank');
-            if (!win) {
-                // ポップアップがブロックされた場合はその場で開く
-                startEditor();
             }
         }
 
