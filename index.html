@@ -668,7 +668,7 @@
 <body>
 
     <header>
-        <div class="title">📋 タイムテーブル＆図面エディター Ver5.6</div>
+        <div class="title">📋 タイムテーブル＆図面エディター Ver5.7</div>
         <div class="view-tabs">
             <button id="tabSheet" class="tab-btn active" onclick="switchView('sheet')">📋 タイムテーブル＆図面</button>
             <button id="tabDraw" class="tab-btn" onclick="switchView('draw')">🎨 図面編集モード</button>
@@ -3737,7 +3737,12 @@
                     { method: 'POST', headers: { 'Content-Type': 'application/json', ...notionHeaders() }, body: '{}' }
                 );
                 const result = await res.json();
-                if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`);
+                if (!res.ok || result.error) {
+                    if (result.foundUrls && result.foundUrls.length) {
+                        console.log('ページ内で見つかったURL:', result.foundUrls);
+                    }
+                    throw new Error(result.error || `HTTP ${res.status}`);
+                }
                 document.getElementById('cpCandidates').innerHTML = '';
                 st.innerHTML = '✅ 接続しました。<b>Notionページを再読み込み</b>してください。';
             } catch (e) {
